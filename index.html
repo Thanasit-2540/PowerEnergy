@@ -246,7 +246,7 @@
         // ==========================================
         // Save All
         // ==========================================
-        document.getElementById('btn-save').addEventListener('click', () => {
+        document.getElementById('btn-save').addEventListener('click', async () => {
             const recorderName = document.getElementById('recorder-name').value;
             const meterType = document.getElementById('meter-type').value;
 
@@ -274,15 +274,52 @@
 
             localStorage.setItem('recorderName', recorderName);
 
-            // TODO: ส่งข้อมูลทั้ง 3 ชุดไปเซฟลง Supabase
-            console.log("Saving Data:", { recorderName, meterType, slotsData });
-            
-            alert(`บันทึกข้อมูลเรียบร้อย!\nผู้จด: ${recorderName}\nมิเตอร์: ${meterType}\nบันทึกครบทั้ง 3 ค่า`);
-            
-            // รีเซ็ตหน้า
-            slotsData.forEach(s => retakePhoto(s.id));
-            document.getElementById('meter-type').value = '';
-            document.getElementById('btn-back').click();
+            // เตรียมข้อมูลส่งให้ Backend ไปเซฟลง Supabase
+            const btnSave = document.getElementById('btn-save');
+            const originalText = btnSave.innerHTML;
+            btnSave.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังอัปโหลดข้อมูล...';
+            btnSave.disabled = true;
+
+            try {
+                const formData = new FormData();
+                formData.append('recorderName', recorderName);
+                formData.append('meterType', meterType);
+                
+                const recordsToSave = slotsData.map(s => ({
+                    slotId: s.id,
+                    expectedCode: s.id === 1 ? '010' : (s.id === 2 ? '011' : '012'),
+                    code: s.code,
+                    value: s.value
+                }));
+                formData.append('records', JSON.stringify(recordsToSave));
+
+                slotsData.forEach(s => {
+                    formData.append('images', s.file);
+                });
+
+                const response = await fetch('/api/save-data', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if(data.success) {
+                    alert(`บันทึกข้อมูลเรียบร้อย!\nผู้จด: ${recorderName}\nมิเตอร์: ${meterType}\nบันทึกไปแล้ว ${data.count} ค่า`);
+                    // รีเซ็ตหน้า
+                    slotsData.forEach(s => retakePhoto(s.id));
+                    document.getElementById('meter-type').value = '';
+                    document.getElementById('btn-back').click();
+                } else {
+                    alert(`เกิดข้อผิดพลาด: ${data.error}`);
+                }
+            } catch(e) {
+                console.error("Save Error:", e);
+                alert("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์ กรุณาลองใหม่");
+            } finally {
+                btnSave.innerHTML = originalText;
+                btnSave.disabled = false;
+            }
         });
 
         // URL QR Code Auto-select

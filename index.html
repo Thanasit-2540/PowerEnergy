@@ -16,6 +16,19 @@
 </head>
 <body class="text-gray-800 h-screen flex flex-col">
 
+    <!-- In-App Browser Warning Overlay -->
+    <div id="inapp-warning" class="hidden fixed inset-0 bg-blue-700 z-50 flex flex-col items-center justify-center p-6 text-white text-center">
+        <i class="fa-solid fa-triangle-exclamation fa-4x mb-4 text-yellow-400"></i>
+        <h2 class="text-2xl font-bold mb-2">คุณกำลังเปิดผ่านแอปแชท</h2>
+        <p class="mb-6 text-blue-100 text-lg">แอปนี้ไม่อนุญาตให้ระบบเปิดกล้องถ่ายรูปโดยตรง เพื่อให้ทำงานได้เร็วที่สุด กรุณาเปิดผ่านเบราว์เซอร์ปกติครับ</p>
+        <button id="btn-open-external" class="bg-white text-blue-700 font-bold py-4 px-8 rounded-full shadow-lg text-xl mb-6 active:bg-gray-200 transition">
+            <i class="fa-brands fa-chrome mr-2"></i> เปิดผ่านเบราว์เซอร์ปกติ
+        </button>
+        <p class="text-sm text-blue-200 bg-blue-800 p-3 rounded-lg border border-blue-600">
+            *หากกดปุ่มไม่ได้ ให้กดปุ่ม <b>เมนูมุมขวาบน (จุด 3 จุด)</b> <br>แล้วเลือก <b>"เปิดด้วยเบราว์เซอร์เริ่มต้น"</b> (Open in default browser)
+        </p>
+    </div>
+
     <!-- Header -->
     <header class="bg-blue-600 text-white p-4 shadow-md flex justify-between items-center z-10">
         <h1 class="text-xl font-bold"><i class="fa-solid fa-bolt mr-2"></i>AI Meter Reader</h1>
@@ -322,8 +335,30 @@
             }
         });
 
-        // URL QR Code Auto-select
+        // URL QR Code Auto-select & In-App Browser Detect
         window.addEventListener('DOMContentLoaded', () => {
+            // 1. In-App Browser Detect
+            const ua = navigator.userAgent || navigator.vendor || window.opera;
+            const isLine = (ua.indexOf("Line") > -1);
+            const isFB = (ua.indexOf("FBAN") > -1) || (ua.indexOf("FBAV") > -1);
+            const isIG = (ua.indexOf("Instagram") > -1);
+            
+            if (isLine || isFB || isIG) {
+                document.getElementById('inapp-warning').classList.remove('hidden');
+            }
+
+            document.getElementById('btn-open-external').addEventListener('click', () => {
+                if (isLine) {
+                    // LINE รองรับการดีดตัวออกผ่าน Parameter
+                    let newUrl = window.location.href;
+                    newUrl += (newUrl.indexOf('?') > -1) ? '&openExternalBrowser=1' : '?openExternalBrowser=1';
+                    window.location.href = newUrl;
+                } else {
+                    alert('กรุณากดที่เมนูมุมขวาบน (จุด 3 จุด) แล้วเลือก "เปิดด้วยเบราว์เซอร์เริ่มต้น" (Open in default browser)');
+                }
+            });
+
+            // 2. QR Code Parameter
             const urlParams = new URLSearchParams(window.location.search);
             const meterParam = urlParams.get('meter');
             if (meterParam) {

@@ -115,7 +115,7 @@
                     
                     <!-- ก่อนถ่ายรูป -->
                     <div id="upload-box-${slot.id}" class="${slot.file ? 'hidden' : ''}">
-                        <input type="file" id="camera-${slot.id}" accept="image/*" capture="environment" class="hidden" onchange="handleImage(event, ${slot.id})">
+                        <input type="file" id="camera-${slot.id}" accept="image/*" capture="camera" class="hidden" onchange="handleImage(event, ${slot.id})">
                         <button type="button" onclick="document.getElementById('camera-${slot.id}').click()" class="w-full border-2 border-dashed border-gray-400 text-gray-600 font-medium py-6 rounded-lg flex flex-col items-center justify-center hover:bg-gray-50 active:bg-gray-100">
                             <i class="fa-solid fa-camera fa-2x mb-2 text-blue-500"></i>
                             <span>แตะเพื่อถ่ายรูป</span>

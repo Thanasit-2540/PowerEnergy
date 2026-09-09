@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Meter Reader</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.1/dist/browser-image-compression.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Prompt', sans-serif; background-color: #f3f4f6; }
+        .hidden { display: none !important; }
+        .slot-card { transition: all 0.3s ease; }
+    </style>
+</head>
+<body class="text-gray-800 h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-blue-600 text-white p-4 shadow-md flex justify-between items-center z-10">
+        <h1 class="text-xl font-bold"><i class="fa-solid fa-bolt mr-2"></i>AI Meter Reader</h1>
+        <button id="btn-home" class="text-white text-lg"><i class="fa-solid fa-house"></i></button>
+    </header>
+
+    <main class="flex-1 overflow-y-auto p-4 pb-20">
+
+        <!-- ==================== DASHBOARD VIEW ==================== -->
+        <div id="view-dashboard" class="space-y-6">
+            <button id="btn-go-record" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-xl shadow-lg flex items-center justify-center text-lg">
+                <i class="fa-solid fa-camera fa-lg mr-3"></i> เริ่มจดบันทึกค่ามิเตอร์
+            </button>
+            
+            <div>
+                <h2 class="text-lg font-semibold mb-3 border-b pb-1">รายการล่าสุด (วันนี้)</h2>
+                <p class="text-gray-500 text-sm text-center py-4">ยังไม่มีข้อมูลในวันนี้</p>
+            </div>
+        </div>
+
+        <!-- ==================== RECORD VIEW ==================== -->
+        <div id="view-record" class="hidden space-y-4">
+            
+            <button id="btn-back" class="text-blue-600 font-medium flex items-center mb-2">
+                <i class="fa-solid fa-chevron-left mr-2"></i> กลับหน้าแรก
+            </button>
+
+            <!-- ข้อมูลทั่วไป -->
+            <div class="bg-white p-4 rounded-xl shadow space-y-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อผู้จด</label>
+                    <input type="text" id="recorder-name" class="w-full p-2 border border-gray-300 rounded-lg" placeholder="ระบุชื่อพนักงาน" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">จุดมิเตอร์</label>
+                    <select id="meter-type" class="w-full p-2 border border-gray-300 rounded-lg" required>
+                        <option value="">-- เลือกจุดมิเตอร์ --</option>
+                        <option value="elec_1">ไฟฟ้า จุดที่ 1</option>
+                        <option value="elec_2">ไฟฟ้า จุดที่ 2</option>
+                        <option value="elec_3">ไฟฟ้า จุดที่ 3</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- คำแนะนำ -->
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded text-sm text-yellow-800">
+                <i class="fa-solid fa-circle-info mr-1"></i> ถ่ายรูปทีละช่องให้ครบ 3 ค่า (010, 011, 012) ระบบจะส่งวิเคราะห์พร้อมกันให้ทันที
+            </div>
+
+            <!-- ช่องใส่รูป 3 ช่อง (Render by JS) -->
+            <div id="slots-container" class="space-y-4">
+                <!-- Slots will be injected here -->
+            </div>
+
+            <!-- Submit -->
+            <button type="button" id="btn-save" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-lg mt-6 flex justify-center items-center text-lg">
+                <i class="fa-solid fa-cloud-arrow-up mr-2"></i> บันทึกข้อมูลทั้ง 3 ค่า
+            </button>
+
+        </div>
+    </main>
+
+    <script>
+        // State
+        const slotsData = [
+            { id: 1, title: 'รูปที่ 1 (คาดหวัง 010)', file: null, code: '', value: '', status: 'idle' },
+            { id: 2, title: 'รูปที่ 2 (คาดหวัง 011)', file: null, code: '', value: '', status: 'idle' },
+            { id: 3, title: 'รูปที่ 3 (คาดหวัง 012)', file: null, code: '', value: '', status: 'idle' }
+        ];
+
+        // Elements
+        const viewDashboard = document.getElementById('view-dashboard');
+        const viewRecord = document.getElementById('view-record');
+        const slotsContainer = document.getElementById('slots-container');
+
+        // Navigation
+        document.getElementById('btn-go-record').addEventListener('click', () => {
+            viewDashboard.classList.add('hidden');
+            viewRecord.classList.remove('hidden');
+            document.getElementById('recorder-name').value = localStorage.getItem('recorderName') || '';
+            renderSlots();
+        });
+
+        document.getElementById('btn-back').addEventListener('click', () => {
+            viewRecord.classList.add('hidden');
+            viewDashboard.classList.remove('hidden');
+        });
+        document.getElementById('btn-home').addEventListener('click', () => document.getElementById('btn-back').click());
+
+        // Render 3 Slots
+        function renderSlots() {
+            slotsContainer.innerHTML = '';
+            slotsData.forEach((slot, index) => {
+                const slotHTML = `
+                <div class="bg-white p-4 rounded-xl shadow slot-card border-t-4 border-blue-500">
+                    <h3 class="font-bold text-gray-700 mb-2">${slot.title}</h3>
+                    
+                    <!-- ก่อนถ่ายรูป -->
+                    <div id="upload-box-${slot.id}" class="${slot.file ? 'hidden' : ''}">
+                        <input type="file" id="camera-${slot.id}" accept="image/*" capture="environment" class="hidden" onchange="handleImage(event, ${slot.id})">
+                        <button type="button" onclick="document.getElementById('camera-${slot.id}').click()" class="w-full border-2 border-dashed border-gray-400 text-gray-600 font-medium py-6 rounded-lg flex flex-col items-center justify-center hover:bg-gray-50 active:bg-gray-100">
+                            <i class="fa-solid fa-camera fa-2x mb-2 text-blue-500"></i>
+                            <span>แตะเพื่อถ่ายรูป</span>
+                        </button>
+                    </div>
+
+                    <!-- หลังถ่ายรูป & ผลลัพธ์ AI -->
+                    <div id="result-box-${slot.id}" class="${!slot.file ? 'hidden' : ''} space-y-3">
+                        <div class="relative">
+                            <img id="preview-${slot.id}" src="" class="w-full h-32 object-cover rounded-lg border">
+                            <button type="button" onclick="retakePhoto(${slot.id})" class="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center shadow">
+                                <i class="fa-solid fa-rotate-right"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="flex space-x-2">
+                            <div class="w-1/3">
+                                <label class="block text-xs text-gray-500 mb-1">รหัสหน้าจอ</label>
+                                <input type="text" id="code-${slot.id}" class="w-full p-2 border border-blue-200 rounded text-center font-bold text-blue-800" placeholder="...">
+                            </div>
+                            <div class="w-2/3 relative">
+                                <label class="block text-xs text-gray-500 mb-1">ค่าที่อ่านได้ (หน่วย)</label>
+                                <input type="number" step="0.01" id="value-${slot.id}" class="w-full p-2 border border-blue-200 rounded text-center font-bold text-xl text-blue-800" placeholder="รอการวิเคราะห์...">
+                                
+                                <div id="loading-${slot.id}" class="absolute right-3 top-7 text-blue-500 hidden">
+                                    <i class="fa-solid fa-spinner fa-spin"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                `;
+                slotsContainer.insertAdjacentHTML('beforeend', slotHTML);
+            });
+        }
+
+        async function handleImage(event, slotId) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const slot = slotsData.find(s => s.id === slotId);
+            
+            // สลับ UI มาแสดงรูป
+            document.getElementById(`upload-box-${slotId}`).classList.add('hidden');
+            document.getElementById(`result-box-${slotId}`).classList.remove('hidden');
+            
+            // แสดงสถานะ Loading
+            const loadingIcon = document.getElementById(`loading-${slotId}`);
+            const codeInput = document.getElementById(`code-${slotId}`);
+            const valueInput = document.getElementById(`value-${slotId}`);
+            
+            loadingIcon.classList.remove('hidden');
+            codeInput.value = '';
+            valueInput.value = '';
+            valueInput.placeholder = 'กำลังบีบอัด...';
+
+            try {
+                // 1. บีบอัดรูป
+                const options = { maxSizeMB: 0.1, maxWidthOrHeight: 1024, useWebWorker: true };
+                const compressedFile = await imageCompression(file, options);
+                
+                slot.file = compressedFile;
+                document.getElementById(`preview-${slotId}`).src = URL.createObjectURL(compressedFile);
+
+                // 2. ส่งให้ AI อ่าน (อิสระจากช่องอื่น)
+                valueInput.placeholder = 'AI กำลังคิด...';
+                
+                const formData = new FormData();
+                formData.append('image', compressedFile);
+
+                const response = await fetch('/api/read-meter', { method: 'POST', body: formData });
+                const data = await response.json();
+                
+                loadingIcon.classList.add('hidden');
+
+                if (data.status === 'blurry') {
+                    alert(`รูปที่ ${slotId} เบลอ หรืออ่านไม่ได้ครับ รบกวนถ่ายช่องนี้ใหม่`);
+                    valueInput.placeholder = 'อ่านไม่ได้';
+                } else if (data.value) {
+                    codeInput.value = data.code || '';
+                    valueInput.value = data.value;
+                    slot.code = data.code;
+                    slot.value = data.value;
+                    
+                    // ตรวจสอบว่ารหัสหน้าจอตรงกับที่คาดหวังของแต่ละช่องหรือไม่
+                    let expectedCode = '';
+                    if (slotId === 1) expectedCode = '010';
+                    if (slotId === 2) expectedCode = '011';
+                    if (slotId === 3) expectedCode = '012';
+                    
+                    if (data.code && data.code !== expectedCode) {
+                        // เปลี่ยนสีช่องเป็นสีแดงเพื่อเตือนสายตา
+                        codeInput.classList.remove('text-blue-800', 'border-blue-200');
+                        codeInput.classList.add('text-red-600', 'bg-red-50', 'border-red-400');
+                        
+                        // เด้งแจ้งเตือน
+                        alert(`⚠️ รูปที่ ${slotId} ผิดจังหวะ!\n\nอ่านรหัสหน้าจอได้ "${data.code}" แต่ช่องนี้ต้องการรหัส "${expectedCode}"\nกรุณากดปุ่มรีเฟรชสีแดงที่รูป เพื่อถ่ายเฉพาะช่องนี้ใหม่ครับ`);
+                    } else {
+                        // กลับเป็นสีปกติถ้ารหัสถูกต้อง
+                        codeInput.classList.add('text-blue-800', 'border-blue-200');
+                        codeInput.classList.remove('text-red-600', 'bg-red-50', 'border-red-400');
+                    }
+
+                    if (navigator.vibrate) navigator.vibrate(50); // สั่นเตือนเมื่อช่องนี้เสร็จ
+                } else {
+                    valueInput.placeholder = 'ไม่พบเลข';
+                }
+
+            } catch (error) {
+                console.error('Error on slot', slotId, error);
+                loadingIcon.classList.add('hidden');
+                valueInput.placeholder = 'เกิดข้อผิดพลาด';
+                alert(`รูปที่ ${slotId} เกิดข้อผิดพลาดในการเชื่อมต่อ`);
+            }
+        }
+
+        function retakePhoto(slotId) {
+            const slot = slotsData.find(s => s.id === slotId);
+            slot.file = null;
+            slot.code = '';
+            slot.value = '';
+            
+            document.getElementById(`upload-box-${slotId}`).classList.remove('hidden');
+            document.getElementById(`result-box-${slotId}`).classList.add('hidden');
+            document.getElementById(`camera-${slotId}`).value = '';
+        }
+
+        // ==========================================
+        // Save All
+        // ==========================================
+        document.getElementById('btn-save').addEventListener('click', () => {
+            const recorderName = document.getElementById('recorder-name').value;
+            const meterType = document.getElementById('meter-type').value;
+
+            if(!recorderName || !meterType) {
+                alert("กรุณากรอกชื่อและเลือกจุดมิเตอร์ให้ครบ"); return;
+            }
+
+            // เช็คว่าถ่ายครบ 3 รูปไหม
+            const missing = slotsData.filter(s => !s.file);
+            if(missing.length > 0) {
+                alert(`คุณยังถ่ายรูปไม่ครบ ขาดรูปที่ ${missing.map(m=>m.id).join(', ')}`); return;
+            }
+
+            // Update state from inputs (in case user manually edited them)
+            slotsData.forEach(slot => {
+                slot.code = document.getElementById(`code-${slot.id}`).value;
+                slot.value = document.getElementById(`value-${slot.id}`).value;
+            });
+
+            // ตรวจสอบว่ามีช่องไหนค่าว่างไหม
+            const emptyValues = slotsData.filter(s => !s.value);
+            if(emptyValues.length > 0) {
+                alert("มีบางรูปที่ยังไม่มีค่าตัวเลข กรุณารอ AI หรือกรอกเองก่อนบันทึก"); return;
+            }
+
+            localStorage.setItem('recorderName', recorderName);
+
+            // TODO: ส่งข้อมูลทั้ง 3 ชุดไปเซฟลง Supabase
+            console.log("Saving Data:", { recorderName, meterType, slotsData });
+            
+            alert(`บันทึกข้อมูลเรียบร้อย!\nผู้จด: ${recorderName}\nมิเตอร์: ${meterType}\nบันทึกครบทั้ง 3 ค่า`);
+            
+            // รีเซ็ตหน้า
+            slotsData.forEach(s => retakePhoto(s.id));
+            document.getElementById('meter-type').value = '';
+            document.getElementById('btn-back').click();
+        });
+
+        // URL QR Code Auto-select
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const meterParam = urlParams.get('meter');
+            if (meterParam) {
+                const meterSelect = document.getElementById('meter-type');
+                if (meterSelect.querySelector(`option[value="${meterParam}"]`)) {
+                    document.getElementById('btn-go-record').click();
+                    setTimeout(() => meterSelect.value = meterParam, 100);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

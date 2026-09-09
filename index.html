@@ -94,9 +94,9 @@
     <script>
         // State
         const slotsData = [
-            { id: 1, title: 'รูปที่ 1 (คาดหวัง 010)', file: null, code: '', value: '', status: 'idle' },
-            { id: 2, title: 'รูปที่ 2 (คาดหวัง 011)', file: null, code: '', value: '', status: 'idle' },
-            { id: 3, title: 'รูปที่ 3 (คาดหวัง 012)', file: null, code: '', value: '', status: 'idle' }
+            { id: 1, title: 'รูปที่ 1 (ถ่ายค่าใดก่อนก็ได้)', file: null, code: '', value: '', status: 'idle' },
+            { id: 2, title: 'รูปที่ 2 (ถ่ายค่าใดก่อนก็ได้)', file: null, code: '', value: '', status: 'idle' },
+            { id: 3, title: 'รูปที่ 3 (ถ่ายค่าใดก่อนก็ได้)', file: null, code: '', value: '', status: 'idle' }
         ];
 
         // Elements
@@ -212,24 +212,22 @@
                     valueInput.value = data.value;
                     slot.code = data.code;
                     slot.value = data.value;
+                    // ให้ AI แยกแยะเองว่านี่คือรหัสอะไร (010, 011 หรือ 012)
+                    const validCodes = ['010', '011', '012'];
+                    codeInput.classList.remove('text-red-600', 'bg-red-50', 'border-red-400', 'text-orange-600', 'bg-orange-50', 'border-orange-400', 'text-blue-800', 'border-blue-200');
                     
-                    // ตรวจสอบว่ารหัสหน้าจอตรงกับที่คาดหวังของแต่ละช่องหรือไม่
-                    let expectedCode = '';
-                    if (slotId === 1) expectedCode = '010';
-                    if (slotId === 2) expectedCode = '011';
-                    if (slotId === 3) expectedCode = '012';
-                    
-                    if (data.code && data.code !== expectedCode) {
-                        // เปลี่ยนสีช่องเป็นสีแดงเพื่อเตือนสายตา
-                        codeInput.classList.remove('text-blue-800', 'border-blue-200');
+                    if (data.code && !validCodes.includes(data.code)) {
                         codeInput.classList.add('text-red-600', 'bg-red-50', 'border-red-400');
-                        
-                        // เด้งแจ้งเตือน
-                        alert(`⚠️ รูปที่ ${slotId} ผิดจังหวะ!\n\nอ่านรหัสหน้าจอได้ "${data.code}" แต่ช่องนี้ต้องการรหัส "${expectedCode}"\nกรุณากดปุ่มรีเฟรชสีแดงที่รูป เพื่อถ่ายเฉพาะช่องนี้ใหม่ครับ`);
+                        alert(`⚠️ ผิดพลาด!\nอ่านรหัสได้ "${data.code}" ซึ่งไม่ใช่ 010, 011 หรือ 012\nกรุณาถ่ายเฉพาะช่องนี้ใหม่`);
                     } else {
-                        // กลับเป็นสีปกติถ้ารหัสถูกต้อง
-                        codeInput.classList.add('text-blue-800', 'border-blue-200');
-                        codeInput.classList.remove('text-red-600', 'bg-red-50', 'border-red-400');
+                        // เช็คว่าถ่ายซ้ำกับช่องอื่นไหม
+                        const isDuplicate = slotsData.some(s => s.id !== slotId && s.code === data.code);
+                        if (isDuplicate) {
+                            codeInput.classList.add('text-orange-600', 'bg-orange-50', 'border-orange-400');
+                            alert(`⚠️ เตือน!\nคุณถ่ายรูปรหัส "${data.code}" ซ้ำกับช่องอื่นที่ถ่ายไปแล้ว\nกรุณาเปลี่ยนไปถ่ายรหัสที่ยังขาดอยู่ครับ`);
+                        } else {
+                            codeInput.classList.add('text-blue-800', 'border-blue-200');
+                        }
                     }
 
                     if (navigator.vibrate) navigator.vibrate(50); // สั่นเตือนเมื่อช่องนี้เสร็จ
@@ -267,22 +265,30 @@
                 alert("กรุณากรอกชื่อและเลือกจุดมิเตอร์ให้ครบ"); return;
             }
 
-            // เช็คว่าถ่ายครบ 3 รูปไหม
-            const missing = slotsData.filter(s => !s.file);
-            if(missing.length > 0) {
-                alert(`คุณยังถ่ายรูปไม่ครบ ขาดรูปที่ ${missing.map(m=>m.id).join(', ')}`); return;
-            }
-
             // Update state from inputs (in case user manually edited them)
             slotsData.forEach(slot => {
                 slot.code = document.getElementById(`code-${slot.id}`).value;
                 slot.value = document.getElementById(`value-${slot.id}`).value;
             });
 
-            // ตรวจสอบว่ามีช่องไหนค่าว่างไหม
-            const emptyValues = slotsData.filter(s => !s.value);
+            // ดึงเฉพาะช่องที่มีการอัปโหลดรูปมาจริงๆ
+            const filledSlots = slotsData.filter(s => s.file);
+
+            if(filledSlots.length === 0) {
+                alert("กรุณาถ่ายรูปอย่างน้อย 1 ช่องก่อนกดบันทึกครับ"); return;
+            }
+
+            // ตรวจสอบว่ารูปที่ถ่ายไป มีค่าตัวเลขครบไหม
+            const emptyValues = filledSlots.filter(s => !s.value);
             if(emptyValues.length > 0) {
-                alert("มีบางรูปที่ยังไม่มีค่าตัวเลข กรุณารอ AI หรือกรอกเองก่อนบันทึก"); return;
+                alert("มีบางรูปที่ AI ยังประมวลผลไม่เสร็จ หรือคุณยังไม่ได้กรอกตัวเลข กรุณาตรวจสอบก่อนบันทึกครับ"); return;
+            }
+
+            // เช็คว่าในรอบการส่งนี้ มีการส่งรหัสเดียวกันซ้ำไหม
+            const collectedCodes = filledSlots.map(s => s.code);
+            const uniqueCodes = new Set(collectedCodes);
+            if(uniqueCodes.size !== collectedCodes.length) {
+                alert("⚠️ เตือน! คุณถ่ายรูปรหัสหน้าจอซ้ำกันในรอบการส่งนี้ กรุณาลบหรือถ่ายใหม่ให้ถูกต้องครับ"); return;
             }
 
             localStorage.setItem('recorderName', recorderName);
@@ -298,15 +304,14 @@
                 formData.append('recorderName', recorderName);
                 formData.append('meterType', meterType);
                 
-                const recordsToSave = slotsData.map(s => ({
+                const recordsToSave = filledSlots.map(s => ({
                     slotId: s.id,
-                    expectedCode: s.id === 1 ? '010' : (s.id === 2 ? '011' : '012'),
                     code: s.code,
                     value: s.value
                 }));
                 formData.append('records', JSON.stringify(recordsToSave));
 
-                slotsData.forEach(s => {
+                filledSlots.forEach(s => {
                     formData.append('images', s.file);
                 });
 

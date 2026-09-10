@@ -382,6 +382,19 @@ app.post('/api/read-meter', upload.single('image'), async (req, res) => {
     }
 });
 
+// API ตรวจสอบรหัสผ่าน Admin
+app.post('/api/verify-admin', (req, res) => {
+    const { password } = req.body;
+    // ดึงรหัสผ่านจาก .env หรือ Environment Variable ถ้าไม่ได้ตั้งไว้ให้ใช้ '1234' เป็นค่าเริ่มต้น
+    const adminPassword = process.env.ADMIN_PASSWORD || '1234';
+    
+    if (password === adminPassword) {
+        res.json({ success: true });
+    } else {
+        res.json({ success: false });
+    }
+});
+
 app.listen(port, async () => {
     console.log(`🚀 Server เปิดแล้วที่ http://localhost:${port}`);
     console.log("⏳ กำลังตรวจสอบรายชื่อโมเดลที่ใช้งานได้จาก Google...");

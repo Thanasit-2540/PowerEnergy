@@ -478,14 +478,38 @@ async function checkOldDataCount() {
     }
 }
 
-function loginAdmin() {
-    if (document.getElementById('admin-pin').value === '1234') {
-        showView('admin-dashboard');
-        renderAdminSettings();
-        checkOldDataCount(); // โหลดจำนวนขยะ
-        document.getElementById('admin-pin').value = '';
-    } else {
-        alert('รหัสผ่านไม่ถูกต้อง (ทดสอบใช้ 1234)');
+async function loginAdmin() {
+    const pinInput = document.getElementById('admin-pin');
+    const pin = pinInput.value;
+    if (!pin) return alert('กรุณาใส่รหัสผ่าน');
+
+    // แจ้งสถานะกำลังตรวจสอบ
+    const originalPlaceholder = pinInput.placeholder;
+    pinInput.placeholder = "กำลังตรวจสอบ...";
+    pinInput.disabled = true;
+    
+    try {
+        const res = await fetch('/api/verify-admin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: pin })
+        });
+        const json = await res.json();
+        
+        if (json.success) {
+            showView('admin-dashboard');
+            renderAdminSettings();
+            checkOldDataCount(); // โหลดจำนวนข้อมูลขยะ
+            pinInput.value = '';
+        } else {
+            alert('รหัสผ่านไม่ถูกต้อง');
+        }
+    } catch(e) {
+        console.error(e);
+        alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้');
+    } finally {
+        pinInput.placeholder = originalPlaceholder;
+        pinInput.disabled = false;
     }
 }
 

@@ -513,6 +513,11 @@ function renderAdminSettings() {
             </button>
         </li>
     `).join('');
+
+    // เติมข้อมูลจุดมิเตอร์ลงใน Dropdown สำหรับแก้ไขข้อมูลย้อนหลัง
+    document.getElementById('edit-meter').innerHTML = appMeters.map(m => `
+        <option value="${m.id}">${m.name} (${m.type === 'electric' ? 'ไฟฟ้า' : 'ประปา'})</option>
+    `).join('');
 }
 
 function adminAddRecorder() {
@@ -598,6 +603,121 @@ async function deleteOldData(days) {
         }
     } catch(e) {
         console.error(e);
+        alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้');
+    }
+}
+
+// ==========================================
+// 10. EDIT & ADD PAST DATA (ADMIN)
+// ==========================================
+async function fetchRecordForEdit() {
+    const date = document.getElementById('edit-date').value;
+    const meterId = document.getElementById('edit-meter').value;
+    if(!date || !meterId) return alert('กรุณาเลือกวันที่และจุดมิเตอร์');
+    
+    const meter = appMeters.find(m => m.id === meterId);
+    
+    document.getElementById('edit-form-container').classList.add('hidden');
+    document.getElementById('edit-not-found').classList.add('hidden');
+    
+    try {
+        const res = await fetch(`/api/get-single-record?date=${date}&meterId=${meterId}&type=${meter.type}`);
+        const json = await res.json();
+        if(json.success && json.data) {
+            const r = json.data;
+            document.getElementById('edit-form-container').classList.remove('hidden');
+            
+            document.getElementById('edit-record-id').value = r.id;
+            document.getElementById('edit-record-type').value = meter.type;
+            
+            const recSelect = document.getElementById('edit-recorder-name');
+            recSelect.innerHTML = appRecorders.map(x => `<option value="${x}">${x}</option>`).join('');
+            recSelect.value = r.recorder_name || appRecorders[0];
+            
+            const t = new Date(r.created_at).toLocaleTimeString('th-TH');
+            document.getElementById('edit-form-time').innerText = 'เวลาที่จด: ' + t;
+            document.getElementById('edit-form-title').innerText = `แก้ไขข้อมูล: ${meter.name}`;
+            
+            if(meter.type === 'electric') {
+                document.getElementById('edit-electric-fields').classList.remove('hidden');
+                document.getElementById('edit-water-fields').classList.add('hidden');
+                document.getElementById('edit-val-010').value = r['010'] || '';
+                document.getElementById('edit-val-011').value = r['011'] || '';
+                document.getElementById('edit-val-012').value = r['012'] || '';
+            } else {
+                document.getElementById('edit-electric-fields').classList.add('hidden');
+                document.getElementById('edit-water-fields').classList.remove('hidden');
+                document.getElementById('edit-val-water').value = r.water_value || '';
+            }
+        } else {
+            // ไม่พบข้อมูล
+            document.getElementById('edit-not-found').classList.remove('hidden');
+        }
+    } catch(e) {
+        alert('เกิดข้อผิดพลาดในการดึงข้อมูล');
+    }
+}
+
+function setupAddMissingRecord() {
+    const meterId = document.getElementById('edit-meter').value;
+    const meter = appMeters.find(m => m.id === meterId);
+    
+    document.getElementById('edit-not-found').classList.add('hidden');
+    document.getElementById('edit-form-container').classList.remove('hidden');
+    
+    document.getElementById('edit-record-id').value = ''; // ว่างไว้เพื่อบอกว่าเป็นการ Insert ใหม่
+    document.getElementById('edit-record-type').value = meter.type;
+    
+    const recSelect = document.getElementById('edit-recorder-name');
+    recSelect.innerHTML = appRecorders.map(x => `<option value="${x}">${x}</option>`).join('');
+    recSelect.value = appRecorders[0];
+    
+    document.getElementById('edit-form-time').innerText = 'ระบบจะใช้เวลาปัจจุบัน';
+    document.getElementById('edit-form-title').innerText = `เพิ่มข้อมูลใหม่: ${meter.name}`;
+    
+    if(meter.type === 'electric') {
+        document.getElementById('edit-electric-fields').classList.remove('hidden');
+        document.getElementById('edit-water-fields').classList.add('hidden');
+        document.getElementById('edit-val-010').value = '';
+        document.getElementById('edit-val-011').value = '';
+        document.getElementById('edit-val-012').value = '';
+    } else {
+        document.getElementById('edit-electric-fields').classList.add('hidden');
+        document.getElementById('edit-water-fields').classList.remove('hidden');
+        document.getElementById('edit-val-water').value = '';
+    }
+}
+
+async function saveEditRecord() {
+    const id = document.getElementById('edit-record-id').value;
+    const type = document.getElementById('edit-record-type').value;
+    const meterId = document.getElementById('edit-meter').value; // จำเป็นสำหรับกรณี insert ใหม่
+    const recorder = document.getElementById('edit-recorder-name').value;
+    
+    let updates = { recorder_name: recorder };
+    if (type === 'electric') {
+        updates['010'] = document.getElementById('edit-val-010').value || null;
+        updates['011'] = document.getElementById('edit-val-011').value || null;
+        updates['012'] = document.getElementById('edit-val-012').value || null;
+    } else {
+        updates['water_value'] = document.getElementById('edit-val-water').value || null;
+    }
+    
+    try {
+        const res = await fetch('/api/update-record', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id, type, updates, meterId })
+        });
+        const json = await res.json();
+        if(json.success) {
+            alert('บันทึกข้อมูลเรียบร้อยแล้ว!');
+            document.getElementById('edit-form-container').classList.add('hidden');
+            updateDashboardStats(); // อัปเดตตารางหน้าแรก
+        } else {
+            alert('Error: ' + json.error);
+        }
+    } catch(e) {
         alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้');
     }
 }

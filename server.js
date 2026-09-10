@@ -124,6 +124,68 @@ app.get('/api/get-records', async (req, res) => {
     }
 });
 
+// API สำหรับดึงข้อมูลแบบเฉพาะเจาะจง 1 รายการ (เพื่อนำมาแก้ไข)
+app.get('/api/get-single-record', async (req, res) => {
+    try {
+        if (!supabase) return res.status(500).json({ error: 'Supabase URL หรือ Key ยังไม่ได้ตั้งค่า' });
+        const { date, meterId, type } = req.query;
+        if (!date || !meterId || !type) return res.status(400).json({ error: 'ข้อมูลไม่ครบ' });
+        
+        const table = type === 'electric' ? 'electric_readings' : 'water_readings';
+        
+        // ค้นหาช่วงเวลาของวันที่เลือก
+        const startDate = new Date(date);
+        const endDate = new Date(date);
+        endDate.setDate(endDate.getDate() + 1);
+
+        const { data, error } = await supabase
+            .from(table)
+            .select('*')
+            .eq('House Number', meterId)
+            .gte('created_at', startDate.toISOString())
+            .lt('created_at', endDate.toISOString())
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+            res.json({ success: true, data: data[0] });
+        } else {
+            res.json({ success: true, data: null });
+        }
+    } catch (error) {
+        console.error("Fetch Single Error:", error);
+        res.status(500).json({ error: 'เกิดข้อผิดพลาดในการดึงข้อมูล' });
+    }
+});
+
+// API สำหรับบันทึกการแก้ไขข้อมูล หรือเพิ่มข้อมูลย้อนหลัง
+app.post('/api/update-record', async (req, res) => {
+    try {
+        const { id, type, updates, meterId } = req.body;
+        if (!type || !updates) return res.status(400).json({ error: 'ข้อมูลไม่ครบ' });
+        
+        const table = type === 'electric' ? 'electric_readings' : 'water_readings';
+        
+        if (id) {
+            // กรณีมี ID แสดงว่าเป็นการแก้ไขของเดิม
+            const { error } = await supabase.from(table).update(updates).eq('id', id);
+            if (error) throw error;
+        } else {
+            // กรณีไม่มี ID แสดงว่าเป็นการเพิ่มข้อมูลย้อนหลัง (Manual Insert)
+            updates['House Number'] = meterId;
+            // ให้สร้างเวลาใหม่ หรือเอาตามวันที่เลือก (ในที่นี้ให้ insert เป็นปัจจุบันไปก่อน เพราะเป็นแค่การจดชดเชย)
+            const { error } = await supabase.from(table).insert([updates]);
+            if (error) throw error;
+        }
+        res.json({ success: true });
+    } catch (error) {
+        console.error("Update Error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // API สำหรับนับข้อมูลเก่า
 app.get('/api/count-old-data', async (req, res) => {
     try {

@@ -278,7 +278,86 @@
                     </div>
                 </div>
                 
-            </div>
+            </div> <!-- จบ 3 คอลัมน์ -->
+
+            <!-- =================ส่วนแก้ไข/เพิ่มข้อมูลย้อนหลัง================= -->
+            <div class="glass-card p-6 rounded-2xl shadow-sm mt-8 border-t-4 border-indigo-500">
+                <h3 class="font-bold mb-4 text-xl dark:text-white"><i class="fa-solid fa-pen-to-square mr-2 text-indigo-500"></i>แก้ไข / เพิ่มข้อมูลย้อนหลัง</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm mb-1 dark:text-gray-300">1. เลือกวันที่</label>
+                        <input type="date" id="edit-date" class="w-full p-3 border dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm mb-1 dark:text-gray-300">2. เลือกจุดมิเตอร์</label>
+                        <select id="edit-meter" class="w-full p-3 border dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <!-- JS จะเติม options -->
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="fetchRecordForEdit()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white p-3 rounded-lg font-bold transition flex justify-center items-center">
+                            <i class="fa-solid fa-magnifying-glass mr-2"></i> ค้นหาข้อมูล
+                        </button>
+                    </div>
+                </div>
+
+                <!-- พื้นที่แสดงฟอร์มแก้ไข (ซ่อนไว้จนกว่าจะค้นหาเจอ) -->
+                <div id="edit-form-container" class="hidden bg-gray-50 dark:bg-gray-800/50 p-6 rounded-xl border border-gray-200 dark:border-gray-700 mt-4 relative overflow-hidden">
+                    <input type="hidden" id="edit-record-id">
+                    <input type="hidden" id="edit-record-type">
+                    
+                    <div class="flex justify-between items-center mb-4 border-b pb-2 dark:border-gray-700">
+                        <h4 class="font-bold text-lg dark:text-white" id="edit-form-title">แก้ไขข้อมูล</h4>
+                        <span class="text-sm text-gray-500" id="edit-form-time">เวลา: --:--</span>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm mb-1 dark:text-gray-300">ชื่อพนักงานผู้จด</label>
+                        <select id="edit-recorder-name" class="w-full p-3 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white font-bold"></select>
+                    </div>
+
+                    <!-- ช่องใส่ค่าไฟฟ้า -->
+                    <div id="edit-electric-fields" class="hidden space-y-4">
+                        <div class="grid grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm mb-1 dark:text-gray-300">รหัส 010 (kWh)</label>
+                                <input type="number" step="0.01" id="edit-val-010" class="w-full p-3 border border-blue-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white text-center font-bold text-blue-700 dark:text-blue-300">
+                            </div>
+                            <div>
+                                <label class="block text-sm mb-1 dark:text-gray-300">รหัส 011 (kvarh)</label>
+                                <input type="number" step="0.01" id="edit-val-011" class="w-full p-3 border border-blue-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white text-center font-bold text-blue-700 dark:text-blue-300">
+                            </div>
+                            <div>
+                                <label class="block text-sm mb-1 dark:text-gray-300">รหัส 012 (kW)</label>
+                                <input type="number" step="0.01" id="edit-val-012" class="w-full p-3 border border-blue-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white text-center font-bold text-blue-700 dark:text-blue-300">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ช่องใส่ค่าประปา -->
+                    <div id="edit-water-fields" class="hidden mb-4">
+                        <label class="block text-sm mb-1 dark:text-gray-300">ค่าน้ำประปา</label>
+                        <input type="number" step="0.01" id="edit-val-water" class="w-full p-3 border border-cyan-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white text-center font-bold text-cyan-600 dark:text-cyan-300">
+                    </div>
+
+                    <button onclick="saveEditRecord()" class="w-full bg-green-600 hover:bg-green-700 text-white p-4 rounded-xl font-bold transition mt-6 text-lg flex justify-center items-center shadow-md">
+                        <i class="fa-solid fa-save mr-2"></i> บันทึกการเปลี่ยนแปลง
+                    </button>
+                </div>
+                
+                <!-- กรณีไม่พบข้อมูล -->
+                <div id="edit-not-found" class="hidden text-center p-8 border border-dashed border-gray-300 dark:border-gray-600 rounded-xl mt-4 bg-gray-50 dark:bg-gray-800/30">
+                    <i class="fa-solid fa-file-circle-xmark fa-3x mb-3 text-red-400"></i>
+                    <p class="text-lg font-bold text-gray-700 dark:text-gray-300 mb-1">ไม่พบประวัติการจดในระบบ</p>
+                    <p class="text-sm text-gray-500 mb-4">ในวันที่เลือก ยังไม่มีการจดมิเตอร์จุดนี้ครับ คุณต้องการเพิ่มข้อมูลตกหล่นหรือไม่?</p>
+                    <button onclick="setupAddMissingRecord()" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold py-2 px-6 rounded-lg transition">
+                        <i class="fa-solid fa-plus mr-1"></i> เพิ่มข้อมูลตกหล่น (Manual)
+                    </button>
+                </div>
+
+            </div> <!-- จบส่วนแก้ไขข้อมูล -->
+
         </div>
 
     </main>

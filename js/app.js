@@ -83,38 +83,30 @@ function updateDashboardStats() {
 }
 
 // ==========================================
-// 4. DYNAMIC RECORDING FORM
+// 4. DYNAMIC RECORDING FORM (QR CODE ONLY)
 // ==========================================
-function openRecordView() {
-    const recSelect = document.getElementById('recorder-name');
-    recSelect.innerHTML = appRecorders.map(r => `<option value="${r}">${r}</option>`).join('');
-    
-    const metSelect = document.getElementById('meter-type');
-    metSelect.innerHTML = '<option value="">-- เลือกจุดมิเตอร์ --</option>' + 
-        appMeters.map(m => `<option value="${m.id}">${m.name} (${m.type === 'electric' ? 'ไฟฟ้า' : 'น้ำ'})</option>`).join('');
-    
-    recSelect.value = localStorage.getItem('lastRecorder') || appRecorders[0];
-    metSelect.value = '';
-    
-    document.getElementById('slots-container').innerHTML = '';
-    document.getElementById('btn-save').classList.add('hidden');
-    document.getElementById('record-hint').classList.add('hidden');
-
-    showView('record');
-}
-
-function handleMeterSelection() {
-    const meterId = document.getElementById('meter-type').value;
+function startRecordingFromQR(meterId) {
     activeMeter = appMeters.find(m => m.id === meterId);
     
     if (!activeMeter) {
-        document.getElementById('slots-container').innerHTML = '';
-        document.getElementById('btn-save').classList.add('hidden');
-        document.getElementById('record-hint').classList.add('hidden');
+        alert('ไม่พบข้อมูลจุดมิเตอร์นี้ในระบบ หรือ QR Code ไม่ถูกต้องครับ');
+        showView('dashboard');
         return;
     }
 
-    if (activeMeter.type === 'electric') {
+    // เตรียม Dropdown พนักงาน
+    const recSelect = document.getElementById('recorder-name');
+    recSelect.innerHTML = appRecorders.map(r => `<option value="${r}">${r}</option>`).join('');
+    recSelect.value = localStorage.getItem('lastRecorder') || appRecorders[0];
+    
+    // อัปเดตข้อมูลบนหน้าจอ (ให้อ่านอย่างเดียว)
+    document.getElementById('display-meter-name').innerText = activeMeter.name;
+    const isElectric = activeMeter.type === 'electric';
+    document.getElementById('display-meter-type').innerHTML = isElectric ? '<i class="fa-solid fa-bolt text-yellow-300 mr-1"></i> ไฟฟ้า' : '<i class="fa-solid fa-droplet text-blue-300 mr-1"></i> ประปา';
+    document.getElementById('display-meter-type').className = isElectric ? 'bg-indigo-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-md' : 'bg-cyan-600 text-white px-4 py-2 rounded-full text-sm font-bold shadow-md';
+
+    // เตรียมช่องถ่ายรูป
+    if (isElectric) {
         slotsData = [
             { id: 1, title: 'รูปที่ 1 (ไฟฟ้า)', file: null, code: '', value: '', status: 'idle' },
             { id: 2, title: 'รูปที่ 2 (ไฟฟ้า)', file: null, code: '', value: '', status: 'idle' },
@@ -129,6 +121,7 @@ function handleMeterSelection() {
     document.getElementById('record-hint').classList.remove('hidden');
     document.getElementById('btn-save').classList.remove('hidden');
     renderSlots();
+    showView('record');
 }
 
 function renderSlots() {
@@ -496,12 +489,6 @@ window.addEventListener('DOMContentLoaded', () => {
     // Auto-select from QR
     const meterParam = new URLSearchParams(window.location.search).get('meter');
     if (meterParam) {
-        openRecordView();
-        setTimeout(() => {
-            const sel = document.getElementById('meter-type');
-            if(sel.querySelector(`option[value="${meterParam}"]`)) {
-                sel.value = meterParam; handleMeterSelection();
-            }
-        }, 100);
+        startRecordingFromQR(meterParam);
     }
 });

@@ -29,28 +29,31 @@ app.post('/api/save-data', upload.array('images', 3), async (req, res) => {
             return res.status(500).json({ error: 'Supabase URL หรือ Key ยังไม่ได้ตั้งค่า' });
         }
 
-        const { recorderName, meterType, records } = req.body;
-        const parsedRecords = JSON.parse(records); // [{slotId, code, value}]
-        const files = req.files; // Array of up to 3 images
+        const { recorderName, meterId, meterType, records } = req.body;
+        const parsedRecords = JSON.parse(records); // [{code, value}]
+        const files = req.files; // Array of images
 
         if (!files || files.length === 0) {
             return res.status(400).json({ error: 'ไม่พบไฟล์รูปภาพ' });
         }
 
-        let savedData = [];
+        // เตรียมข้อมูลตั้งต้น 1 แถว สำหรับ Insert ลงฐานข้อมูล
+        let insertData = {
+            "recorder_name": recorderName,
+            "House Number": meterId
+        };
 
-        // ลูปประมวลผลทีละรูป
+        // ลูปประมวลผลและอัปโหลดทีละรูป
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
             const record = parsedRecords[i]; // ข้อมูลที่คู่กับรูปนี้
             
-            // 1. สร้างชื่อไฟล์สุ่มป้องกันซ้ำ
+            // 1. อัปโหลดรูปขึ้น Supabase Storage
             const fileExt = file.mimetype.split('/')[1] || 'jpg';
             const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-            const filePath = `${meterType}/${fileName}`;
+            const filePath = `${meterId}/${fileName}`;
 
-            // 2. อัปโหลดรูปขึ้น Supabase Storage (Bucket: meter_images)
-            const { data: uploadData, error: uploadError } = await supabase
+            const { error: uploadError } = await supabase
                 .storage
                 .from('meter_images')
                 .upload(filePath, file.buffer, {
@@ -63,26 +66,25 @@ app.post('/api/save-data', upload.array('images', 3), async (req, res) => {
             const { data: publicUrlData } = supabase.storage.from('meter_images').getPublicUrl(filePath);
             const imageUrl = publicUrlData.publicUrl;
 
-            // 3. เตรียมข้อมูลสำหรับบันทึกลง Database
-            savedData.push({
-                recorder_name: recorderName,
-                meter_type: meterType,
-                expected_code: record.expectedCode,
-                read_code: record.code,
-                reading_value: parseFloat(record.value),
-                image_url: imageUrl,
-                created_at: new Date().toISOString()
-            });
+            // 2. จัดเรียงข้อมูลลงในแถวตามประเภท (รหัส)
+            if (meterType === 'electric') {
+                insertData[record.code] = record.value; // เช่น คอลัมน์ '010'
+                insertData[`IMG${record.code}`] = imageUrl; // เช่น คอลัมน์ 'IMG010'
+            } else if (meterType === 'water') {
+                insertData['water_value'] = record.value; // คอลัมน์ 'water_value'
+                insertData['water_img'] = imageUrl; // คอลัมน์ 'water_img'
+            }
         }
 
-        // 4. บันทึกข้อมูลลงตาราง meter_readings ทีเดียว 3 แถว
+        // 3. เลือกว่าจะบันทึกลงตารางไหน แล้วส่งไปบันทึกครั้งเดียว
+        const tableName = meterType === 'electric' ? 'electric_readings' : 'water_readings';
         const { error: dbError } = await supabase
-            .from('meter_readings')
-            .insert(savedData);
+            .from(tableName)
+            .insert([insertData]);
 
         if (dbError) throw dbError;
 
-        res.json({ success: true, message: 'บันทึกข้อมูลสำเร็จ', count: savedData.length });
+        res.json({ success: true, message: `บันทึกข้อมูลลงตาราง ${tableName} สำเร็จ` });
 
     } catch (error) {
         console.error("Save Error:", error);

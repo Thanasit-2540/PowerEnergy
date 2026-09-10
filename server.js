@@ -97,23 +97,24 @@ app.get('/api/get-records', async (req, res) => {
     try {
         if (!supabase) return res.status(500).json({ error: 'Supabase URL หรือ Key ยังไม่ได้ตั้งค่า' });
         
-        // ดึงข้อมูลไฟฟ้า
-        const { data: elecData, error: elecErr } = await supabase
+        // ดึงข้อมูลไฟฟ้า (ถ้าตารางไม่มี อาจจะ error เราจับแยกกัน)
+        let elecData = [];
+        const { data: eData, error: elecErr } = await supabase
             .from('electric_readings')
             .select('*')
             .order('created_at', { ascending: false });
+        if (!elecErr && eData) elecData = eData;
             
-        // ดึงข้อมูลประปา
-        const { data: waterData, error: waterErr } = await supabase
+        // ดึงข้อมูลประปา (ถ้ายังไม่สร้างตาราง ให้ข้ามไป ไม่ต้องแจ้ง Error จนพัง)
+        let waterData = [];
+        const { data: wData, error: waterErr } = await supabase
             .from('water_readings')
             .select('*')
             .order('created_at', { ascending: false });
-            
-        if (elecErr) throw elecErr;
-        if (waterErr) throw waterErr;
+        if (!waterErr && wData) waterData = wData;
         
         // รวมข้อมูลและเรียงลำดับตามเวลาล่าสุด
-        let combined = [...(elecData || []), ...(waterData || [])];
+        let combined = [...elecData, ...waterData];
         combined.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
         
         res.json({ success: true, data: combined });
@@ -139,10 +140,12 @@ app.get('/api/count-old-data', async (req, res) => {
                 .from(table)
                 .select('*', { count: 'exact', head: true })
                 .lt('created_at', cutoffStr);
+            // Ignore error if table doesn't exist yet
             if (!error && c) count += c;
         }
         res.json({ success: true, count });
     } catch (error) {
+        console.error("Count Error:", error);
         res.status(500).json({ error: error.message });
     }
 });

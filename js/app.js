@@ -479,12 +479,12 @@ async function checkOldDataCount() {
 }
 
 function loginAdmin() {
-    if (document.getElementById('admin-password').value === '1234') {
+    if (document.getElementById('admin-pin').value === '1234') {
         showView('admin-dashboard');
         renderAdminMeters();
         renderAdminRecorders();
         checkOldDataCount(); // โหลดจำนวนขยะ
-        document.getElementById('admin-password').value = '';
+        document.getElementById('admin-pin').value = '';
     } else {
         alert('รหัสผ่านไม่ถูกต้อง (ทดสอบใช้ 1234)');
     }

@@ -322,10 +322,8 @@ app.post('/api/read-meter', upload.single('image'), async (req, res) => {
             return res.status(400).json({ error: 'กรุณาอัปโหลดรูปภาพ' });
         }
 
-        const apiKey = process.env.GEMINI_API_KEY;
-        
-        // 🔥 เปลี่ยนมาใช้รุ่น Lite เพื่อเน้นความเร็วสูงสุด (Low Latency)
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${apiKey}`;
+        // 🔥 อัปเดตใช้รุ่นใหม่ล่าสุดที่รองรับการอ่านภาพ (Vision)
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-image:generateContent?key=${apiKey}`;
 
         const promptText = `
         อ่านค่าจากหน้าจอมิเตอร์ไฟฟ้านี้ แล้วตอบกลับมาเป็น JSON ตามรูปแบบนี้เท่านั้น:

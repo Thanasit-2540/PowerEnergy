@@ -294,6 +294,12 @@ async function handleImage(event, slotId) {
         
         loadingIcon.classList.add('hidden');
 
+        if (data.error) {
+            alert('AI มีปัญหา: ' + (data.details || data.error));
+            valueInput.placeholder = 'AI ขัดข้อง';
+            return;
+        }
+
         if (data.status === 'blurry') {
             alert(`รูปเบลอ หรืออ่านไม่ได้ครับ รบกวนถ่ายช่องนี้ใหม่`);
             valueInput.placeholder = 'อ่านไม่ได้';

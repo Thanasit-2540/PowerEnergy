@@ -403,11 +403,20 @@ app.get('/api/settings', async (req, res) => {
     try {
         if (!supabase) return res.json({ success: false, error: 'No Supabase' });
         
-        const { data: metersData, error: errM } = await supabase.from('meters').select('*').order('created_at', { ascending: true });
-        const { data: recordersData, error: errR } = await supabase.from('recorders').select('*').order('created_at', { ascending: true });
+        let meters = [];
+        let recorders = [];
         
-        const meters = (metersData || []).map(m => ({ id: m.id, name: m.name, type: m.type }));
-        const recorders = (recordersData || []).map(r => r.name);
+        // ดึงจุดมิเตอร์ (ถ้าตารางยังไม่มีก็ข้ามไป)
+        try {
+            const { data: metersData, error: errM } = await supabase.from('meters').select('*').order('created_at', { ascending: true });
+            if (!errM && metersData) meters = metersData.map(m => ({ id: m.id, name: m.name, type: m.type }));
+        } catch(e) { console.warn('meters table not found'); }
+        
+        // ดึงรายชื่อพนักงาน (ถ้าตารางยังไม่มีก็ข้ามไป)
+        try {
+            const { data: recordersData, error: errR } = await supabase.from('recorders').select('*').order('created_at', { ascending: true });
+            if (!errR && recordersData) recorders = recordersData.map(r => r.name);
+        } catch(e) { console.warn('recorders table not found'); }
         
         res.json({ success: true, meters, recorders });
     } catch(e) {

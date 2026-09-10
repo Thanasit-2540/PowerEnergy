@@ -2,28 +2,29 @@
 // แกนหลักการทำงานของแอป (UI State, Camera, AI Logic)
 
 // ==========================================
-// 1. DATA STATE (MOCK DB with LocalStorage)
+// 1. DATA STATE (ดึงจาก Supabase ผ่าน Server)
 // ==========================================
-const defaultMeters = [
-    { id: 'elec_1', name: 'ไฟฟ้า จุดที่ 1', type: 'electric' },
-    { id: 'elec_2', name: 'ไฟฟ้า จุดที่ 2', type: 'electric' },
-    { id: 'water_1', name: 'ประปา จุดที่ 1', type: 'water' },
-    { id: 'water_2', name: 'ประปา จุดที่ 2', type: 'water' }
-];
-
-let appRecorders = ['กำลังโหลด...'];
+let appRecorders = [];
 let appMeters = [];
 
 async function loadSettings() {
     try {
         const res = await fetch('/api/settings');
         const json = await res.json();
-        if (json.success) {
+        if (json.success && json.meters && json.recorders) {
             appMeters = json.meters;
             appRecorders = json.recorders;
+            // สำรองลง localStorage เผื่อ offline
+            localStorage.setItem('appMeters', JSON.stringify(appMeters));
+            localStorage.setItem('appRecorders', JSON.stringify(appRecorders));
+        } else {
+            throw new Error('API returned unsuccessful');
         }
     } catch(e) {
-        console.error("Failed to load settings from server", e);
+        console.warn("โหลดจากเซิร์ฟเวอร์ไม่ได้ ใช้ข้อมูลสำรอง:", e);
+        // Fallback: ใช้ข้อมูลสำรองจาก localStorage
+        appMeters = JSON.parse(localStorage.getItem('appMeters')) || [];
+        appRecorders = JSON.parse(localStorage.getItem('appRecorders')) || [];
     }
 }
 let appRecords = JSON.parse(localStorage.getItem('appRecords')) || [];

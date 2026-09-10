@@ -527,7 +527,9 @@ async function loginAdmin() {
     }
 }
 
-function renderAdminSettings() {
+async function renderAdminSettings() {
+    // โหลดข้อมูลล่าสุดจากฐานข้อมูลก่อนแสดงผลทุกครั้ง
+    await loadSettings();
     const rl = document.getElementById('admin-recorders-list');
     rl.innerHTML = appRecorders.map((r, i) => `
         <li class="flex justify-between items-center bg-gray-50 dark:bg-gray-700 p-2 rounded border dark:border-gray-600">

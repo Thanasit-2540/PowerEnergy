@@ -76,15 +76,44 @@ app.post('/api/save-data', upload.array('images', 3), async (req, res) => {
             }
         }
 
-        // 3. เลือกว่าจะบันทึกลงตารางไหน แล้วส่งไปบันทึกครั้งเดียว
+        // 3. เลือกว่าจะบันทึกลงตารางไหน
         const tableName = meterType === 'electric' ? 'electric_readings' : 'water_readings';
-        const { error: dbError } = await supabase
+        
+        // เช็คว่าวันนี้มีการบันทึกของจุดนี้ไปแล้วหรือยัง (ใช้เวลาโซนไทย)
+        const todayTH = new Date().toLocaleDateString('en-CA', {timeZone: 'Asia/Bangkok'}); // ได้ 'YYYY-MM-DD'
+        const startOfDay = new Date(`${todayTH}T00:00:00+07:00`).toISOString();
+        const endOfDay = new Date(`${todayTH}T23:59:59.999+07:00`).toISOString();
+
+        const { data: existingData, error: findErr } = await supabase
             .from(tableName)
-            .insert([insertData]);
+            .select('id')
+            .eq('House Number', meterId)
+            .gte('created_at', startOfDay)
+            .lt('created_at', endOfDay)
+            .order('created_at', { ascending: false })
+            .limit(1);
 
-        if (dbError) throw dbError;
+        if (existingData && existingData.length > 0) {
+            // มีข้อมูลของวันนี้แล้ว ให้อัปเดตทับ (อัปเดตเฉพาะช่องที่มีค่าส่งมา)
+            const existingId = existingData[0].id;
+            insertData.created_at = new Date().toISOString(); // รีเซ็ตเวลาเป็นเวลาล่าสุด
 
-        res.json({ success: true, message: `บันทึกข้อมูลลงตาราง ${tableName} สำเร็จ` });
+            const { error: dbError } = await supabase
+                .from(tableName)
+                .update(insertData)
+                .eq('id', existingId);
+
+            if (dbError) throw dbError;
+            res.json({ success: true, message: `อัปเดตข้อมูลที่ถ่ายซ้ำสำเร็จ` });
+        } else {
+            // ยังไม่มีข้อมูลในวันนี้ ให้สร้างแถวใหม่
+            const { error: dbError } = await supabase
+                .from(tableName)
+                .insert([insertData]);
+
+            if (dbError) throw dbError;
+            res.json({ success: true, message: `บันทึกข้อมูลใหม่ลงระบบสำเร็จ` });
+        }
 
     } catch (error) {
         console.error("Save Error:", error);

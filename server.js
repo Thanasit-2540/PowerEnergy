@@ -123,6 +123,81 @@ app.get('/api/get-records', async (req, res) => {
     }
 });
 
+// API สำหรับลบข้อมูลเก่า (รูปและ Database)
+app.post('/api/delete-old-data', async (req, res) => {
+    try {
+        const { days } = req.body;
+        if (!days) return res.status(400).json({ error: 'ไม่พบพารามิเตอร์ days' });
+        
+        const result = await cleanupOldData(days);
+        res.json({ success: true, message: `ลบข้อมูลเก่าเกิน ${days} วัน เรียบร้อยแล้ว`, deletedCount: result });
+    } catch (error) {
+        console.error("Delete Error:", error);
+        res.status(500).json({ error: 'เกิดข้อผิดพลาดในการลบข้อมูล' });
+    }
+});
+
+// ฟังก์ชันลบข้อมูลเก่า (ลบทั้งไฟล์รูปใน Storage และข้อมูลใน DB)
+async function cleanupOldData(days) {
+    if (!supabase) return 0;
+    
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+    const cutoffStr = cutoffDate.toISOString();
+
+    let totalDeleted = 0;
+    const tables = ['electric_readings', 'water_readings'];
+    
+    for (const table of tables) {
+        // 1. ค้นหาข้อมูลเก่า
+        const { data: oldRecords, error: selectErr } = await supabase
+            .from(table)
+            .select('*')
+            .lt('created_at', cutoffStr);
+            
+        if (selectErr || !oldRecords || oldRecords.length === 0) continue;
+
+        // 2. แยกลิงก์รูปภาพเพื่อไปลบใน Storage
+        let pathsToDelete = [];
+        for (const r of oldRecords) {
+            if (r.IMG010) pathsToDelete.push(extractPathFromUrl(r.IMG010));
+            if (r.IMG011) pathsToDelete.push(extractPathFromUrl(r.IMG011));
+            if (r.IMG012) pathsToDelete.push(extractPathFromUrl(r.IMG012));
+            if (r.water_img) pathsToDelete.push(extractPathFromUrl(r.water_img));
+        }
+        pathsToDelete = pathsToDelete.filter(p => p !== null);
+
+        // 3. ลบรูปใน Storage
+        if (pathsToDelete.length > 0) {
+            await supabase.storage.from('meter_images').remove(pathsToDelete);
+        }
+
+        // 4. ลบข้อมูลใน Database
+        const ids = oldRecords.map(r => r.id);
+        const { error: deleteErr } = await supabase
+            .from(table)
+            .delete()
+            .in('id', ids);
+            
+        if (!deleteErr) totalDeleted += oldRecords.length;
+    }
+    
+    return totalDeleted;
+}
+
+function extractPathFromUrl(url) {
+    if (!url) return null;
+    const marker = 'meter_images/';
+    const idx = url.indexOf(marker);
+    return idx !== -1 ? url.substring(idx + marker.length) : null;
+}
+
+// ลบอัตโนมัติ 20 วัน (ทำงานทุกๆ 24 ชั่วโมง)
+setInterval(() => {
+    console.log("Running auto-cleanup for > 20 days...");
+    cleanupOldData(20).catch(console.error);
+}, 1000 * 60 * 60 * 24);
+
 app.post('/api/read-meter', upload.single('image'), async (req, res) => {
     try {
         if (!req.file) {

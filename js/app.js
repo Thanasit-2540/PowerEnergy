@@ -559,6 +559,29 @@ function closeQRModal() {
     document.getElementById('modal-qr').classList.add('hidden');
 }
 
+async function deleteOldData(days) {
+    if(!confirm(`ยืนยันการลบข้อมูลและรูปภาพที่อายุเกิน ${days} วัน?\n*คำเตือน: ข้อมูลจะถูกลบออกจากฐานข้อมูลและไม่สามารถกู้คืนได้`)) return;
+    
+    try {
+        const res = await fetch('/api/delete-old-data', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ days })
+        });
+        const json = await res.json();
+        
+        if (json.success) {
+            alert(json.message + ` (ลบไปทั้งหมด ${json.deletedCount} รายการ)`);
+            updateDashboardStats(); // อัปเดตตาราง
+        } else {
+            alert('เกิดข้อผิดพลาด: ' + json.error);
+        }
+    } catch(e) {
+        console.error(e);
+        alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้');
+    }
+}
+
 // เริ่มทำงานเมื่อเปิดหน้าเว็บ
 window.addEventListener('DOMContentLoaded', () => {
     initTheme();

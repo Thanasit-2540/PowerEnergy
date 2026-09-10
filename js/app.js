@@ -8,26 +8,25 @@ let appRecorders = [];
 let appMeters = [];
 
 async function loadSettings() {
+    console.log('📡 loadSettings: กำลังดึงข้อมูลจาก /api/settings...');
     try {
         const res = await fetch('/api/settings');
+        console.log('📡 loadSettings: HTTP status =', res.status);
         const json = await res.json();
-        if (json.success && json.meters && json.recorders) {
-            appMeters = json.meters;
-            appRecorders = json.recorders;
-            // สำรองลง localStorage เผื่อ offline
-            localStorage.setItem('appMeters', JSON.stringify(appMeters));
-            localStorage.setItem('appRecorders', JSON.stringify(appRecorders));
+        console.log('📡 loadSettings: ข้อมูลที่ได้จาก Server =', JSON.stringify(json));
+        
+        if (json.success) {
+            appMeters = json.meters || [];
+            appRecorders = json.recorders || [];
+            console.log('✅ loadSettings: โหลดสำเร็จ! meters =', appMeters.length, 'recorders =', appRecorders.length);
         } else {
-            throw new Error('API returned unsuccessful');
+            console.error('❌ loadSettings: Server ตอบ success=false', json.error);
         }
     } catch(e) {
-        console.warn("โหลดจากเซิร์ฟเวอร์ไม่ได้ ใช้ข้อมูลสำรอง:", e);
-        // Fallback: ใช้ข้อมูลสำรองจาก localStorage
-        appMeters = JSON.parse(localStorage.getItem('appMeters')) || [];
-        appRecorders = JSON.parse(localStorage.getItem('appRecorders')) || [];
+        console.error('❌ loadSettings: ล้มเหลว', e);
     }
 }
-let appRecords = JSON.parse(localStorage.getItem('appRecords')) || [];
+let appRecords = [];
 
 let slotsData = []; // เก็บสถานะของช่องถ่ายรูปหน้าฟอร์มปัจจุบัน
 let activeMeter = null; // มิเตอร์จุดที่กำลังจดอยู่
@@ -528,72 +527,139 @@ async function loginAdmin() {
 }
 
 async function renderAdminSettings() {
-    // โหลดข้อมูลล่าสุดจากฐานข้อมูลก่อนแสดงผลทุกครั้ง
+    console.log('🔄 renderAdminSettings: เริ่มทำงาน...');
+    
+    // โหลดข้อมูลล่าสุดจากฐานข้อมูลก่อน
     await loadSettings();
-    const rl = document.getElementById('admin-recorders-list');
-    rl.innerHTML = appRecorders.map((r, i) => `
-        <li class="flex justify-between items-center bg-gray-50 dark:bg-gray-700 p-2 rounded border dark:border-gray-600">
-            <span class="dark:text-gray-200">${r}</span>
-            <button onclick="removeRecorder(${i})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button>
-        </li>
-    `).join('');
+    
+    console.log('🔄 renderAdminSettings: appRecorders =', appRecorders);
+    console.log('🔄 renderAdminSettings: appMeters =', appMeters);
 
+    // แสดงรายชื่อพนักงาน
+    const rl = document.getElementById('admin-recorders-list');
+    if (appRecorders.length === 0) {
+        rl.innerHTML = '<p class="text-center text-gray-400 py-4">ยังไม่มีข้อมูลพนักงาน</p>';
+    } else {
+        rl.innerHTML = appRecorders.map((r, i) => `
+            <li class="flex justify-between items-center bg-gray-50 dark:bg-gray-700 p-2 rounded border dark:border-gray-600">
+                <span class="dark:text-gray-200">${r}</span>
+                <button onclick="removeRecorder('${r}')" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button>
+            </li>
+        `).join('');
+    }
+
+    // แสดงรายชื่อจุดมิเตอร์
     const ml = document.getElementById('admin-meters-list');
-    ml.innerHTML = appMeters.map((m, i) => `
-        <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded border dark:border-gray-600 mb-2">
-            <div class="flex justify-between items-start mb-2">
-                <div>
-                    <div class="font-bold text-sm dark:text-white">${m.name}</div>
-                    <div class="text-xs text-gray-500 dark:text-gray-400">รหัส: ${m.id} | ประเภท: ${m.type === 'electric' ? 'ไฟฟ้า' : 'ประปา'}</div>
+    if (appMeters.length === 0) {
+        ml.innerHTML = '<p class="text-center text-gray-400 py-4">ยังไม่มีจุดมิเตอร์</p>';
+    } else {
+        ml.innerHTML = appMeters.map((m, i) => `
+            <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded border dark:border-gray-600 mb-2">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <div class="font-bold text-sm dark:text-white">${m.name}</div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400">รหัส: ${m.id} | ประเภท: ${m.type === 'electric' ? 'ไฟฟ้า' : 'ประปา'}</div>
+                    </div>
+                    <button onclick="removeMeter('${m.id}')" class="text-red-500 hover:text-red-700 p-1"><i class="fa-solid fa-trash"></i></button>
                 </div>
-                <button onclick="removeMeter(${i})" class="text-red-500 hover:text-red-700 p-1"><i class="fa-solid fa-trash"></i></button>
+                <button onclick="generateQRCode('${m.id}', '${m.name}')" class="w-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 py-1 rounded text-sm font-medium hover:bg-blue-200 transition">
+                    <i class="fa-solid fa-qrcode mr-1"></i> สร้าง QR Code
+                </button>
             </div>
-            <button onclick="generateQRCode('${m.id}', '${m.name}')" class="w-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 py-1 rounded text-sm font-medium hover:bg-blue-200 transition">
-                <i class="fa-solid fa-qrcode mr-1"></i> สร้าง QR Code
-            </button>
-        </div>
-    `).join('');
+        `).join('');
+    }
 
     // เติมข้อมูลจุดมิเตอร์ลงใน Dropdown สำหรับแก้ไขข้อมูลย้อนหลัง
-    document.getElementById('edit-meter').innerHTML = appMeters.map(m => `
-        <option value="${m.id}">${m.name} (${m.type === 'electric' ? 'ไฟฟ้า' : 'ประปา'})</option>
-    `).join('');
+    const editMeterSelect = document.getElementById('edit-meter');
+    if (editMeterSelect) {
+        editMeterSelect.innerHTML = appMeters.map(m => `
+            <option value="${m.id}">${m.name} (${m.type === 'electric' ? 'ไฟฟ้า' : 'ประปา'})</option>
+        `).join('');
+    }
+    
+    console.log('✅ renderAdminSettings: แสดงผลเสร็จสิ้น');
 }
 
+// เพิ่มพนักงาน
 async function adminAddRecorder() {
-    const v = document.getElementById('admin-new-recorder').value.trim();
-    if(v && !appRecorders.includes(v)) {
-        document.getElementById('admin-new-recorder').value = 'กำลังเพิ่ม...';
-        await fetch('/api/settings/add-recorder', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name: v}) });
-        document.getElementById('admin-new-recorder').value = '';
-        await loadSettings();
-        renderAdminSettings();
+    const input = document.getElementById('admin-new-recorder');
+    const name = input.value.trim();
+    if (!name) return alert('กรุณาพิมพ์ชื่อพนักงาน');
+    if (appRecorders.includes(name)) return alert('ชื่อนี้มีในระบบแล้ว');
+
+    try {
+        const res = await fetch('/api/settings/add-recorder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        const json = await res.json();
+        console.log('เพิ่มพนักงาน:', json);
+        if (!json.success) alert('เพิ่มไม่สำเร็จ: ' + json.error);
+        input.value = '';
+        await renderAdminSettings();
+    } catch(e) {
+        alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้');
     }
 }
-async function removeRecorder(i) {
-    const name = appRecorders[i];
-    await fetch('/api/settings/delete-recorder', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name}) });
-    await loadSettings();
-    renderAdminSettings();
+
+// ลบพนักงาน (ส่งชื่อตรงๆ ไม่ใช้ index)
+async function removeRecorder(name) {
+    if (!confirm('ลบพนักงาน "' + name + '" ออกจากระบบ?')) return;
+    try {
+        const res = await fetch('/api/settings/delete-recorder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        const json = await res.json();
+        console.log('ลบพนักงาน:', json);
+        await renderAdminSettings();
+    } catch(e) {
+        alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้');
+    }
 }
 
+// เพิ่มจุดมิเตอร์
 async function adminAddMeter() {
     const id = document.getElementById('admin-meter-id').value.trim();
     const name = document.getElementById('admin-meter-name').value.trim();
     const type = document.getElementById('admin-meter-type').value;
-    if(id && name) {
-        if(appMeters.find(m => m.id === id)) return alert('รหัสจุดซ้ำ!');
-        await fetch('/api/settings/add-meter', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id, name, type}) });
-        document.getElementById('admin-meter-id').value = ''; document.getElementById('admin-meter-name').value = '';
-        await loadSettings();
-        renderAdminSettings();
-    } else { alert('กรอกข้อมูลให้ครบ'); }
+    if (!id || !name) return alert('กรอกข้อมูลให้ครบ');
+    if (appMeters.find(m => m.id === id)) return alert('รหัสจุดซ้ำ!');
+
+    try {
+        const res = await fetch('/api/settings/add-meter', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, name, type })
+        });
+        const json = await res.json();
+        console.log('เพิ่มมิเตอร์:', json);
+        if (!json.success) alert('เพิ่มไม่สำเร็จ: ' + json.error);
+        document.getElementById('admin-meter-id').value = '';
+        document.getElementById('admin-meter-name').value = '';
+        await renderAdminSettings();
+    } catch(e) {
+        alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้');
+    }
 }
-async function removeMeter(i) {
-    const id = appMeters[i].id;
-    await fetch('/api/settings/delete-meter', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id}) });
-    await loadSettings();
-    renderAdminSettings();
+
+// ลบจุดมิเตอร์ (ส่ง id ตรงๆ ไม่ใช้ index)
+async function removeMeter(id) {
+    if (!confirm('ลบจุดมิเตอร์ "' + id + '" ออกจากระบบ?')) return;
+    try {
+        const res = await fetch('/api/settings/delete-meter', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id })
+        });
+        const json = await res.json();
+        console.log('ลบมิเตอร์:', json);
+        await renderAdminSettings();
+    } catch(e) {
+        alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้');
+    }
 }
 
 function clearHistoryData() {

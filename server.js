@@ -405,21 +405,31 @@ app.get('/api/settings', async (req, res) => {
         
         let meters = [];
         let recorders = [];
+        let debugErrors = [];
         
-        // ดึงจุดมิเตอร์ (ถ้าตารางยังไม่มีก็ข้ามไป)
-        try {
-            const { data: metersData, error: errM } = await supabase.from('meters').select('*').order('created_at', { ascending: true });
-            if (!errM && metersData) meters = metersData.map(m => ({ id: m.id, name: m.name, type: m.type }));
-        } catch(e) { console.warn('meters table not found'); }
+        // ดึงจุดมิเตอร์
+        const { data: metersData, error: errM } = await supabase.from('meters').select('*').order('created_at', { ascending: true });
+        if (errM) {
+            console.error('❌ meters error:', errM);
+            debugErrors.push('meters: ' + errM.message);
+        } else {
+            meters = (metersData || []).map(m => ({ id: m.id, name: m.name, type: m.type }));
+        }
         
-        // ดึงรายชื่อพนักงาน (ถ้าตารางยังไม่มีก็ข้ามไป)
-        try {
-            const { data: recordersData, error: errR } = await supabase.from('recorders').select('*').order('created_at', { ascending: true });
-            if (!errR && recordersData) recorders = recordersData.map(r => r.name);
-        } catch(e) { console.warn('recorders table not found'); }
+        // ดึงรายชื่อพนักงาน
+        const { data: recordersData, error: errR } = await supabase.from('recorders').select('*').order('created_at', { ascending: true });
+        if (errR) {
+            console.error('❌ recorders error:', errR);
+            debugErrors.push('recorders: ' + errR.message);
+        } else {
+            recorders = (recordersData || []).map(r => r.name);
+        }
         
-        res.json({ success: true, meters, recorders });
+        console.log(`📊 /api/settings: meters=${meters.length}, recorders=${recorders.length}, errors=${debugErrors.length}`);
+        
+        res.json({ success: true, meters, recorders, debugErrors });
     } catch(e) {
+        console.error('❌ /api/settings crash:', e);
         res.status(500).json({ success: false, error: e.message });
     }
 });

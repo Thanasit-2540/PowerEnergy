@@ -481,8 +481,7 @@ async function checkOldDataCount() {
 function loginAdmin() {
     if (document.getElementById('admin-pin').value === '1234') {
         showView('admin-dashboard');
-        renderAdminMeters();
-        renderAdminRecorders();
+        renderAdminSettings();
         checkOldDataCount(); // โหลดจำนวนขยะ
         document.getElementById('admin-pin').value = '';
     } else {
@@ -516,26 +515,26 @@ function renderAdminSettings() {
     `).join('');
 }
 
-function addRecorder() {
-    const v = document.getElementById('new-recorder').value.trim();
+function adminAddRecorder() {
+    const v = document.getElementById('admin-new-recorder').value.trim();
     if(v && !appRecorders.includes(v)) {
         appRecorders.push(v);
         localStorage.setItem('appRecorders', JSON.stringify(appRecorders));
-        document.getElementById('new-recorder').value = '';
+        document.getElementById('admin-new-recorder').value = '';
         renderAdminSettings();
     }
 }
 function removeRecorder(i) { appRecorders.splice(i, 1); localStorage.setItem('appRecorders', JSON.stringify(appRecorders)); renderAdminSettings(); }
 
-function addMeter() {
-    const id = document.getElementById('new-meter-id').value.trim();
-    const name = document.getElementById('new-meter-name').value.trim();
-    const type = document.getElementById('new-meter-type').value;
+function adminAddMeter() {
+    const id = document.getElementById('admin-meter-id').value.trim();
+    const name = document.getElementById('admin-meter-name').value.trim();
+    const type = document.getElementById('admin-meter-type').value;
     if(id && name) {
         if(appMeters.find(m => m.id === id)) return alert('รหัสจุดซ้ำ!');
         appMeters.push({id, name, type});
         localStorage.setItem('appMeters', JSON.stringify(appMeters));
-        document.getElementById('new-meter-id').value = ''; document.getElementById('new-meter-name').value = '';
+        document.getElementById('admin-meter-id').value = ''; document.getElementById('admin-meter-name').value = '';
         renderAdminSettings();
     } else { alert('กรอกข้อมูลให้ครบ'); }
 }

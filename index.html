@@ -220,25 +220,18 @@
             <button onclick="showView('dashboard')" class="text-blue-600 dark:text-blue-400 font-medium flex items-center mb-4">
                 <i class="fa-solid fa-chevron-left mr-2"></i> กลับ
             </button>
-            <div class="glass-card p-6 rounded-2xl shadow-sm text-center border-t-4 border-gray-800 dark:border-gray-400">
-                <i class="fa-solid fa-lock text-4xl text-gray-400 mb-4"></i>
-                <h2 class="text-xl font-bold mb-4 dark:text-white">เข้าสู่ระบบ Admin</h2>
-                <input type="password" id="admin-pin" class="w-full p-3 border dark:border-gray-600 rounded-lg text-center text-2xl tracking-widest mb-4 bg-gray-50 dark:bg-gray-700 dark:text-white" placeholder="รหัสผ่าน (1234)">
-                <button onclick="loginAdmin()" class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 rounded-lg transition">ยืนยัน</button>
+            <div class="glass-card p-6 rounded-2xl shadow-sm text-center">
+                <h2 class="text-xl font-bold mb-4 dark:text-white"><i class="fa-solid fa-gear mr-2 text-gray-500"></i>เข้าสู่หน้าตั้งค่า</h2>
+                <input type="password" id="admin-pin" class="w-full p-3 border dark:border-gray-600 rounded-lg text-center text-2xl tracking-widest mb-4 bg-gray-50 dark:bg-gray-700 dark:text-white" placeholder="ใส่รหัส">
+                <button onclick="loginAdmin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">เข้าสู่หน้าตั้งค่า</button>
             </div>
         </div>
 
-        <!-- ==================== ADMIN PANEL ==================== -->
-        <div id="view-admin" class="view-section space-y-6">
-            <div class="flex justify-between items-center mb-2">
-                <button onclick="showView('dashboard')" class="text-blue-600 dark:text-blue-400 font-medium flex items-center">
         <!-- ==================== ADMIN DASHBOARD ==================== -->
         <div id="view-admin-dashboard" class="view-section space-y-4">
             <div class="flex justify-between items-center mb-4">
                 <button onclick="showView('dashboard')" class="text-blue-600 dark:text-blue-400 font-medium"><i class="fa-solid fa-chevron-left mr-2"></i> กลับหน้าแรก</button>
-                <div class="flex space-x-2">
-                    <button onclick="logoutAdmin()" class="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 px-3 py-1 rounded-lg text-sm transition">ออกจากระบบ</button>
-                </div>
+                <span class="font-bold text-lg dark:text-white"><i class="fa-solid fa-gear mr-2"></i>แผงควบคุม (Admin)</span>
             </div>
 
             <!-- จัดเรียงแบบ 3 คอลัมน์ บนจอคอมพิวเตอร์ -->
@@ -280,7 +273,7 @@
                             <i class="fa-solid fa-triangle-exclamation mr-2"></i> ลบทิ้งทั้งหมดเดี๋ยวนี้
                         </button>
                         <p class="text-xs text-gray-400 dark:text-gray-500 mt-4 leading-relaxed">
-                            * ระบบจะทำการลบข้อมูลและรูปภาพใน Cloud ที่อายุเกิน 20 วันออกให้อัตโนมัติทุกๆ 24 ชั่วโมง
+                            * ระบบลบอัตโนมัติ: ข้อมูลที่อายุเกิน 20 วัน จะถูกลบทิ้งทุกๆ 24 ชม.
                         </p>
                     </div>
                 </div>

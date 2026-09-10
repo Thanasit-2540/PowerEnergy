@@ -117,7 +117,7 @@ app.post('/api/save-data', upload.array('images', 3), async (req, res) => {
 
     } catch (error) {
         console.error("Save Error:", error);
-        res.status(500).json({ error: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล' });
+        res.status(500).json({ error: 'เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + error.message });
     }
 });
 

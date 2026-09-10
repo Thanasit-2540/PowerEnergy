@@ -51,35 +51,110 @@ function showView(viewId) {
 }
 
 // ==========================================
-// 3. DASHBOARD STATS
+// 3. DASHBOARD STATS & TABLE
 // ==========================================
-function updateDashboardStats() {
-    const now = new Date();
-    const todayStr = now.toLocaleDateString('th-TH');
-    
-    // ข้อมูลทั้งหมด
-    const totalElec = appMeters.filter(m => m.type === 'electric').length;
-    const totalWater = appMeters.filter(m => m.type === 'water').length;
-    
-    // ข้อมูลที่จดวันนี้แล้ว
-    const todayRecords = appRecords.filter(r => r.date === todayStr);
-    
-    // นับจำนวนจุดที่ไม่ซ้ำที่จดไปแล้ววันนี้
-    const elecDoneIds = new Set(todayRecords.filter(r => r.type === 'electric').map(r => r.meterId));
-    const waterDoneIds = new Set(todayRecords.filter(r => r.type === 'water').map(r => r.meterId));
-    
-    const elecDone = elecDoneIds.size;
-    const waterDone = waterDoneIds.size;
-    
-    // คำนวณค้างจด
-    const elecPending = totalElec - elecDone;
-    const waterPending = totalWater - waterDone;
+async function updateDashboardStats() {
+    try {
+        const tbody = document.getElementById('dashboard-table-body');
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i>กำลังดึงข้อมูลจาก Cloud...</td></tr>';
 
-    // อัปเดตขึ้นหน้าจอ
-    document.getElementById('stat-elec-done').innerText = elecDone;
-    document.getElementById('stat-elec-pending').innerText = elecPending;
-    document.getElementById('stat-water-done').innerText = waterDone;
-    document.getElementById('stat-water-pending').innerText = waterPending;
+        const res = await fetch('/api/get-records');
+        const json = await res.json();
+        
+        if (!json.success) {
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-red-500">Error: ${json.error}</td></tr>`;
+            return;
+        }
+
+        const records = json.data;
+        const now = new Date();
+        // แปลงวันที่แบบ th-TH ให้เหมือนกับที่บันทึกในฐานข้อมูล (YYYY-MM-DD) หรือเช็คจาก Date object
+        const todayStr = now.toLocaleDateString('en-CA'); // YYYY-MM-DD format commonly used for date comparison
+        
+        // ข้อมูลทั้งหมด (จาก localStorage ชั่วคราว หรือถ้ามีใน db ก็เช็คจากที่จด)
+        const totalElec = appMeters.filter(m => m.type === 'electric').length;
+        const totalWater = appMeters.filter(m => m.type === 'water').length;
+        
+        // ข้อมูลที่จดวันนี้แล้ว
+        const todayRecords = records.filter(r => {
+            const rDate = new Date(r.created_at).toLocaleDateString('en-CA');
+            return rDate === todayStr;
+        });
+        
+        // นับจำนวนจุดที่ไม่ซ้ำที่จดไปแล้ววันนี้
+        const elecDoneIds = new Set(todayRecords.filter(r => r.meter_type === 'electric' || r['010']).map(r => r["House Number"]));
+        const waterDoneIds = new Set(todayRecords.filter(r => r.meter_type === 'water' || r.water_value).map(r => r["House Number"]));
+        
+        const elecDone = elecDoneIds.size;
+        const waterDone = waterDoneIds.size;
+        
+        document.getElementById('stat-elec-done').innerText = elecDone;
+        document.getElementById('stat-elec-pending').innerText = Math.max(0, totalElec - elecDone);
+        document.getElementById('stat-water-done').innerText = waterDone;
+        document.getElementById('stat-water-pending').innerText = Math.max(0, totalWater - waterDone);
+
+        // Render Table
+        if (todayRecords.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400">ยังไม่มีข้อมูลการจดมิเตอร์ของวันนี้</td></tr>';
+        } else {
+            let html = '';
+            todayRecords.forEach(r => {
+                const dateObj = new Date(r.created_at);
+                const timeStr = dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                const isElec = r['010'] !== undefined;
+                
+                let valuesHtml = '';
+                let imagesHtml = '';
+                
+                if (isElec) {
+                    // ไฟฟ้า
+                    valuesHtml = `
+                        <div class="text-xs space-y-1">
+                            ${r['010'] ? `<div class="bg-blue-50 text-blue-700 px-2 rounded border border-blue-200">010: <b>${r['010']}</b></div>` : ''}
+                            ${r['011'] ? `<div class="bg-blue-50 text-blue-700 px-2 rounded border border-blue-200">011: <b>${r['011']}</b></div>` : ''}
+                            ${r['012'] ? `<div class="bg-blue-50 text-blue-700 px-2 rounded border border-blue-200">012: <b>${r['012']}</b></div>` : ''}
+                        </div>`;
+                    imagesHtml = `
+                        <div class="flex space-x-1 justify-center">
+                            ${r['IMG010'] ? `<a href="${r['IMG010']}" target="_blank"><img src="${r['IMG010']}" class="w-8 h-8 object-cover rounded cursor-pointer border hover:scale-150 transition transform"></a>` : ''}
+                            ${r['IMG011'] ? `<a href="${r['IMG011']}" target="_blank"><img src="${r['IMG011']}" class="w-8 h-8 object-cover rounded cursor-pointer border hover:scale-150 transition transform"></a>` : ''}
+                            ${r['IMG012'] ? `<a href="${r['IMG012']}" target="_blank"><img src="${r['IMG012']}" class="w-8 h-8 object-cover rounded cursor-pointer border hover:scale-150 transition transform"></a>` : ''}
+                        </div>`;
+                } else {
+                    // ประปา
+                    valuesHtml = `<div class="bg-cyan-50 text-cyan-700 px-2 rounded border border-cyan-200 text-xs inline-block">ค่าน้ำ: <b>${r.water_value}</b></div>`;
+                    imagesHtml = r.water_img ? `<a href="${r.water_img}" target="_blank"><img src="${r.water_img}" class="w-8 h-8 object-cover rounded cursor-pointer border hover:scale-150 transition transform mx-auto"></a>` : '';
+                }
+
+                html += `
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                        <td class="px-4 py-3 border-b dark:border-gray-700">
+                            <div class="font-medium text-gray-800 dark:text-gray-200">${timeStr}</div>
+                            <div class="text-xs text-gray-500"><i class="fa-solid fa-user text-[10px] mr-1"></i>${r.recorder_name}</div>
+                        </td>
+                        <td class="px-4 py-3 border-b dark:border-gray-700">
+                            ${isElec 
+                                ? `<span class="inline-block px-2 py-1 bg-yellow-100 text-yellow-800 text-[10px] font-bold rounded-full mb-1"><i class="fa-solid fa-bolt mr-1"></i>ไฟฟ้า</span>`
+                                : `<span class="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-[10px] font-bold rounded-full mb-1"><i class="fa-solid fa-droplet mr-1"></i>ประปา</span>`
+                            }
+                            <div class="font-bold text-gray-700 dark:text-gray-300 text-xs">${r['House Number'] || '-'}</div>
+                        </td>
+                        <td class="px-4 py-2 border-b dark:border-gray-700 align-middle">
+                            ${valuesHtml}
+                        </td>
+                        <td class="px-4 py-3 border-b dark:border-gray-700 text-center align-middle">
+                            ${imagesHtml}
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+    } catch (e) {
+        console.error(e);
+        document.getElementById('dashboard-table-body').innerHTML = '<tr><td colspan="4" class="text-center py-8 text-red-500">เกิดข้อผิดพลาดในการโหลดข้อมูล</td></tr>';
+    }
 }
 
 // ==========================================

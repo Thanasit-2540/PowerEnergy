@@ -92,6 +92,37 @@ app.post('/api/save-data', upload.array('images', 3), async (req, res) => {
     }
 });
 
+// API สำหรับดึงข้อมูลทั้งหมดมาแสดงบน Dashboard
+app.get('/api/get-records', async (req, res) => {
+    try {
+        if (!supabase) return res.status(500).json({ error: 'Supabase URL หรือ Key ยังไม่ได้ตั้งค่า' });
+        
+        // ดึงข้อมูลไฟฟ้า
+        const { data: elecData, error: elecErr } = await supabase
+            .from('electric_readings')
+            .select('*')
+            .order('created_at', { ascending: false });
+            
+        // ดึงข้อมูลประปา
+        const { data: waterData, error: waterErr } = await supabase
+            .from('water_readings')
+            .select('*')
+            .order('created_at', { ascending: false });
+            
+        if (elecErr) throw elecErr;
+        if (waterErr) throw waterErr;
+        
+        // รวมข้อมูลและเรียงลำดับตามเวลาล่าสุด
+        let combined = [...(elecData || []), ...(waterData || [])];
+        combined.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        
+        res.json({ success: true, data: combined });
+    } catch (error) {
+        console.error("Fetch Error:", error);
+        res.status(500).json({ error: 'เกิดข้อผิดพลาดในการดึงข้อมูล' });
+    }
+});
+
 app.post('/api/read-meter', upload.single('image'), async (req, res) => {
     try {
         if (!req.file) {

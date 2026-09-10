@@ -64,54 +64,61 @@
         <!-- ==================== DASHBOARD VIEW ==================== -->
         <div id="view-dashboard" class="view-section active space-y-6">
             
+            <!-- แถบเมนูด้านบน -->
+            <div class="flex space-x-2 overflow-x-auto pb-2">
+                <button onclick="showView('dashboard')" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold shadow-sm whitespace-nowrap"><i class="fa-solid fa-list-check mr-2"></i>ข้อมูลวันนี้</button>
+                <button onclick="showView('export')" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-2 rounded-lg font-medium shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 whitespace-nowrap"><i class="fa-solid fa-file-excel text-green-600 mr-2"></i>Export</button>
+                <button onclick="openAdminLogin()" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-2 rounded-lg font-medium shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 whitespace-nowrap"><i class="fa-solid fa-gear text-gray-500 mr-2"></i>ตั้งค่า</button>
+            </div>
+
             <!-- สถิติรายวัน -->
             <div class="glass-card rounded-2xl shadow-sm p-5 border-l-4 border-l-blue-500">
                 <h2 class="font-bold text-lg mb-4 dark:text-white"><i class="fa-solid fa-chart-pie mr-2 text-blue-500"></i>ภาพรวมการจดมิเตอร์วันนี้</h2>
                 <div class="grid grid-cols-2 gap-4">
                     <!-- ไฟฟ้า -->
-                    <div class="bg-blue-50 dark:bg-gray-800 p-3 rounded-xl border border-blue-100 dark:border-gray-700 text-center shadow-sm">
-                        <div class="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1">ไฟฟ้า (จุด)</div>
-                        <div class="text-2xl font-bold text-blue-700 dark:text-blue-400">
+                    <div class="bg-blue-50 dark:bg-gray-800 p-3 rounded-xl border border-blue-100 dark:border-gray-700 text-center shadow-sm relative overflow-hidden">
+                        <div class="absolute -right-4 -top-4 opacity-10"><i class="fa-solid fa-bolt fa-4x text-blue-500"></i></div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1 relative z-10">ไฟฟ้า (จุด)</div>
+                        <div class="text-3xl font-bold text-blue-700 dark:text-blue-400 relative z-10">
                             <span id="stat-elec-done">0</span> <span class="text-sm text-gray-400 font-normal">/</span> <span id="stat-elec-pending" class="text-sm text-red-500">0</span>
                         </div>
-                        <div class="text-[10px] text-gray-400 mt-1">จดแล้ว / ค้างจด</div>
+                        <div class="text-[10px] text-gray-400 mt-1 relative z-10">จดแล้ว / ค้างจด</div>
                     </div>
                     <!-- ประปา -->
-                    <div class="bg-cyan-50 dark:bg-gray-800 p-3 rounded-xl border border-cyan-100 dark:border-gray-700 text-center shadow-sm">
-                        <div class="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1">ประปา (จุด)</div>
-                        <div class="text-2xl font-bold text-cyan-600 dark:text-cyan-400">
+                    <div class="bg-cyan-50 dark:bg-gray-800 p-3 rounded-xl border border-cyan-100 dark:border-gray-700 text-center shadow-sm relative overflow-hidden">
+                        <div class="absolute -right-4 -top-4 opacity-10"><i class="fa-solid fa-droplet fa-4x text-cyan-500"></i></div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400 font-semibold mb-1 relative z-10">ประปา (จุด)</div>
+                        <div class="text-3xl font-bold text-cyan-600 dark:text-cyan-400 relative z-10">
                             <span id="stat-water-done">0</span> <span class="text-sm text-gray-400 font-normal">/</span> <span id="stat-water-pending" class="text-sm text-red-500">0</span>
                         </div>
-                        <div class="text-[10px] text-gray-400 mt-1">จดแล้ว / ค้างจด</div>
+                        <div class="text-[10px] text-gray-400 mt-1 relative z-10">จดแล้ว / ค้างจด</div>
                     </div>
                 </div>
             </div>
 
-            <!-- แจ้งเตือนให้สแกน QR Code -->
-            <div class="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 p-4 rounded-xl text-center shadow-sm">
-                <i class="fa-solid fa-qrcode text-4xl text-blue-500 mb-2"></i>
-                <h3 class="font-bold text-blue-800 dark:text-blue-300">สแกน QR Code เพื่อจดมิเตอร์</h3>
-                <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">ใช้กล้องมือถือหรือแอป LINE สแกน QR Code ที่หน้างานเพื่อเข้าสู่หน้าบันทึกข้อมูลโดยอัตโนมัติ</p>
-            </div>
-
-            <!-- เมนูย่อย -->
-            <div class="grid grid-cols-2 gap-4">
-                <button onclick="openHistoryView('today')" class="glass-card p-4 rounded-xl shadow-sm text-center hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                    <i class="fa-solid fa-calendar-day text-3xl text-green-500 mb-2"></i>
-                    <div class="font-bold text-sm dark:text-gray-200">ข้อมูลวันนี้</div>
-                </button>
-                <button onclick="openHistoryView('all')" class="glass-card p-4 rounded-xl shadow-sm text-center hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                    <i class="fa-solid fa-list text-3xl text-purple-500 mb-2"></i>
-                    <div class="font-bold text-sm dark:text-gray-200">ประวัติทั้งหมด</div>
-                </button>
-                <button onclick="showView('export')" class="glass-card p-4 rounded-xl shadow-sm text-center hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                    <i class="fa-solid fa-file-excel text-3xl text-green-600 mb-2"></i>
-                    <div class="font-bold text-sm dark:text-gray-200">โหลด Excel</div>
-                </button>
-                <button onclick="openAdminLogin()" class="glass-card p-4 rounded-xl shadow-sm text-center hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                    <i class="fa-solid fa-gear text-3xl text-gray-600 dark:text-gray-400 mb-2"></i>
-                    <div class="font-bold text-sm dark:text-gray-200">ตั้งค่า (Admin)</div>
-                </button>
+            <!-- ตารางข้อมูลวันนี้ -->
+            <div class="glass-card rounded-2xl shadow-sm overflow-hidden">
+                <div class="bg-gray-50 dark:bg-gray-800 p-4 border-b dark:border-gray-700 flex justify-between items-center">
+                    <h3 class="font-bold text-gray-800 dark:text-white"><i class="fa-solid fa-clipboard-list text-green-500 mr-2"></i>ข้อมูลที่จดแล้ว (วันนี้)</h3>
+                    <button onclick="updateDashboardStats()" class="text-blue-500 text-sm"><i class="fa-solid fa-rotate-right mr-1"></i>รีเฟรช</button>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-xs text-gray-600 dark:text-gray-400 uppercase bg-gray-100 dark:bg-gray-700">
+                            <tr>
+                                <th class="px-4 py-3 whitespace-nowrap">เวลา / ผู้จด</th>
+                                <th class="px-4 py-3 whitespace-nowrap">ประเภท / จุด</th>
+                                <th class="px-4 py-3 whitespace-nowrap">ค่าที่อ่านได้</th>
+                                <th class="px-4 py-3 text-center whitespace-nowrap">รูปถ่ายหน้างาน</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashboard-table-body" class="divide-y divide-gray-200 dark:divide-gray-700">
+                            <!-- JS จะเติมข้อมูลตารางตรงนี้ -->
+                            <tr><td colspan="4" class="text-center py-8 text-gray-400">กำลังโหลดข้อมูล...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 

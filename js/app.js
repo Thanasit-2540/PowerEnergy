@@ -500,7 +500,7 @@ function renderAdminSettings() {
 
     const ml = document.getElementById('admin-meters-list');
     ml.innerHTML = appMeters.map((m, i) => `
-        <li class="bg-gray-50 dark:bg-gray-700 p-3 rounded border dark:border-gray-600 mb-2">
+        <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded border dark:border-gray-600 mb-2">
             <div class="flex justify-between items-start mb-2">
                 <div>
                     <div class="font-bold text-sm dark:text-white">${m.name}</div>
@@ -511,7 +511,7 @@ function renderAdminSettings() {
             <button onclick="generateQRCode('${m.id}', '${m.name}')" class="w-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 py-1 rounded text-sm font-medium hover:bg-blue-200 transition">
                 <i class="fa-solid fa-qrcode mr-1"></i> สร้าง QR Code
             </button>
-        </li>
+        </div>
     `).join('');
 
     // เติมข้อมูลจุดมิเตอร์ลงใน Dropdown สำหรับแก้ไขข้อมูลย้อนหลัง
@@ -610,6 +610,18 @@ async function deleteOldData(days) {
 // ==========================================
 // 10. EDIT & ADD PAST DATA (ADMIN)
 // ==========================================
+function toggleMeterList() {
+    const container = document.getElementById('meter-list-container');
+    const btn = document.getElementById('btn-toggle-meter-list');
+    if (container.classList.contains('hidden')) {
+        container.classList.remove('hidden');
+        btn.innerHTML = '<i class="fa-solid fa-chevron-up mr-1"></i> ซ่อนรายการ';
+    } else {
+        container.classList.add('hidden');
+        btn.innerHTML = '<i class="fa-solid fa-chevron-down mr-1"></i> แสดงรายการ';
+    }
+}
+
 async function fetchRecordForEdit() {
     const date = document.getElementById('edit-date').value;
     const meterId = document.getElementById('edit-meter').value;

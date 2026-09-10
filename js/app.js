@@ -527,18 +527,37 @@ function clearHistoryData() {
     }
 }
 
-// 9. QR CODE & BOOTSTRAP
+// ==========================================
+// 9. ADMIN & QR CODE
+// ==========================================
 function generateQRCode(id, name) {
     document.getElementById('modal-qr').classList.remove('hidden');
-    document.getElementById('qr-title').innerText = `QR Code: ${name}`;
-    document.getElementById('qrcode-render').innerHTML = '';
     
+    // หาว่าเป็นมิเตอร์ประเภทอะไร
+    const meter = appMeters.find(m => m.id === id);
+    const isElec = meter && meter.type === 'electric';
+    const typeText = isElec ? '⚡ ไฟฟ้า (လျှပ်စစ်)' : '💧 ประปา (ရေ)';
+
+    // นำข้อมูลไปใส่ในป้าย
+    document.getElementById('qr-display-name').innerText = name;
+    document.getElementById('qr-display-id').innerText = id;
+    document.getElementById('qr-display-type').innerText = typeText;
+    
+    // สร้าง QR
+    document.getElementById('qrcode-render').innerHTML = '';
     new QRCode(document.getElementById('qrcode-render'), {
         text: window.location.origin + window.location.pathname + '?meter=' + id,
-        width: 200, height: 200, colorDark: "#000000", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.H
+        width: 200,
+        height: 200,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
     });
 }
-function closeQRModal() { document.getElementById('modal-qr').classList.add('hidden'); }
+
+function closeQRModal() {
+    document.getElementById('modal-qr').classList.add('hidden');
+}
 
 // เริ่มทำงานเมื่อเปิดหน้าเว็บ
 window.addEventListener('DOMContentLoaded', () => {

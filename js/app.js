@@ -455,18 +455,38 @@ function openHistoryView(filter) {
     showView('history');
 }
 
-// 8. ADMIN LOGIN & PANEL
+// ==========================================
+// 9. ADMIN & QR CODE
+// ==========================================
 function openAdminLogin() {
-    document.getElementById('admin-pin').value = '';
     showView('admin-login');
 }
 
+async function checkOldDataCount() {
+    const countEl = document.getElementById('old-data-count');
+    countEl.innerText = '...';
+    try {
+        const res = await fetch('/api/count-old-data?days=15');
+        const json = await res.json();
+        if (json.success) {
+            countEl.innerText = json.count + " รายการ";
+        } else {
+            countEl.innerText = "Error";
+        }
+    } catch(e) {
+        countEl.innerText = "Error";
+    }
+}
+
 function loginAdmin() {
-    if (document.getElementById('admin-pin').value === '1234') {
-        renderAdminSettings();
-        showView('admin');
+    if (document.getElementById('admin-password').value === '1234') {
+        showView('admin-dashboard');
+        renderAdminMeters();
+        renderAdminRecorders();
+        checkOldDataCount(); // โหลดจำนวนขยะ
+        document.getElementById('admin-password').value = '';
     } else {
-        alert('รหัสผ่านไม่ถูกต้อง');
+        alert('รหัสผ่านไม่ถูกต้อง (ทดสอบใช้ 1234)');
     }
 }
 
@@ -572,7 +592,8 @@ async function deleteOldData(days) {
         
         if (json.success) {
             alert(json.message + ` (ลบไปทั้งหมด ${json.deletedCount} รายการ)`);
-            updateDashboardStats(); // อัปเดตตาราง
+            updateDashboardStats(); // อัปเดตตารางหน้าแรก
+            checkOldDataCount(); // อัปเดตตัวเลขหน้า Admin
         } else {
             alert('เกิดข้อผิดพลาด: ' + json.error);
         }

@@ -123,6 +123,30 @@ app.get('/api/get-records', async (req, res) => {
     }
 });
 
+// API สำหรับนับข้อมูลเก่า
+app.get('/api/count-old-data', async (req, res) => {
+    try {
+        if (!supabase) return res.json({ success: true, count: 0 });
+        const days = parseInt(req.query.days) || 15;
+        
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - days);
+        const cutoffStr = cutoffDate.toISOString();
+
+        let count = 0;
+        for (const table of ['electric_readings', 'water_readings']) {
+            const { count: c, error } = await supabase
+                .from(table)
+                .select('*', { count: 'exact', head: true })
+                .lt('created_at', cutoffStr);
+            if (!error && c) count += c;
+        }
+        res.json({ success: true, count });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // API สำหรับลบข้อมูลเก่า (รูปและ Database)
 app.post('/api/delete-old-data', async (req, res) => {
     try {

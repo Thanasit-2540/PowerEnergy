@@ -394,6 +394,70 @@ app.post('/api/verify-admin', (req, res) => {
         res.json({ success: false });
     }
 });
+// ==========================================
+// API จัดการรายชื่อพนักงาน และ จุดมิเตอร์
+// ==========================================
+
+// ดึงข้อมูลการตั้งค่าทั้งหมด (Meters & Recorders)
+app.get('/api/settings', async (req, res) => {
+    try {
+        if (!supabase) return res.json({ success: false, error: 'No Supabase' });
+        
+        const { data: metersData, error: errM } = await supabase.from('meters').select('*').order('created_at', { ascending: true });
+        const { data: recordersData, error: errR } = await supabase.from('recorders').select('*').order('created_at', { ascending: true });
+        
+        const meters = (metersData || []).map(m => ({ id: m.id, name: m.name, type: m.type }));
+        const recorders = (recordersData || []).map(r => r.name);
+        
+        res.json({ success: true, meters, recorders });
+    } catch(e) {
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+app.post('/api/settings/add-meter', async (req, res) => {
+    const { id, name, type } = req.body;
+    try {
+        const { error } = await supabase.from('meters').insert([{ id, name, type }]);
+        if (error) throw error;
+        res.json({ success: true });
+    } catch(e) {
+        res.json({ success: false, error: e.message });
+    }
+});
+
+app.post('/api/settings/delete-meter', async (req, res) => {
+    const { id } = req.body;
+    try {
+        const { error } = await supabase.from('meters').delete().eq('id', id);
+        if (error) throw error;
+        res.json({ success: true });
+    } catch(e) {
+        res.json({ success: false, error: e.message });
+    }
+});
+
+app.post('/api/settings/add-recorder', async (req, res) => {
+    const { name } = req.body;
+    try {
+        const { error } = await supabase.from('recorders').insert([{ name }]);
+        if (error) throw error;
+        res.json({ success: true });
+    } catch(e) {
+        res.json({ success: false, error: e.message });
+    }
+});
+
+app.post('/api/settings/delete-recorder', async (req, res) => {
+    const { name } = req.body;
+    try {
+        const { error } = await supabase.from('recorders').delete().eq('name', name);
+        if (error) throw error;
+        res.json({ success: true });
+    } catch(e) {
+        res.json({ success: false, error: e.message });
+    }
+});
 
 app.listen(port, async () => {
     console.log(`🚀 Server เปิดแล้วที่ http://localhost:${port}`);

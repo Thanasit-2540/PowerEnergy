@@ -11,8 +11,21 @@ const defaultMeters = [
     { id: 'water_2', name: 'ประปา จุดที่ 2', type: 'water' }
 ];
 
-let appMeters = JSON.parse(localStorage.getItem('appMeters')) || defaultMeters;
-let appRecorders = JSON.parse(localStorage.getItem('appRecorders')) || ['พนักงาน A', 'พนักงาน B'];
+let appRecorders = ['กำลังโหลด...'];
+let appMeters = [];
+
+async function loadSettings() {
+    try {
+        const res = await fetch('/api/settings');
+        const json = await res.json();
+        if (json.success) {
+            appMeters = json.meters;
+            appRecorders = json.recorders;
+        }
+    } catch(e) {
+        console.error("Failed to load settings from server", e);
+    }
+}
 let appRecords = JSON.parse(localStorage.getItem('appRecords')) || [];
 
 let slotsData = []; // เก็บสถานะของช่องถ่ายรูปหน้าฟอร์มปัจจุบัน
@@ -544,30 +557,41 @@ function renderAdminSettings() {
     `).join('');
 }
 
-function adminAddRecorder() {
+async function adminAddRecorder() {
     const v = document.getElementById('admin-new-recorder').value.trim();
     if(v && !appRecorders.includes(v)) {
-        appRecorders.push(v);
-        localStorage.setItem('appRecorders', JSON.stringify(appRecorders));
+        document.getElementById('admin-new-recorder').value = 'กำลังเพิ่ม...';
+        await fetch('/api/settings/add-recorder', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name: v}) });
         document.getElementById('admin-new-recorder').value = '';
+        await loadSettings();
         renderAdminSettings();
     }
 }
-function removeRecorder(i) { appRecorders.splice(i, 1); localStorage.setItem('appRecorders', JSON.stringify(appRecorders)); renderAdminSettings(); }
+async function removeRecorder(i) {
+    const name = appRecorders[i];
+    await fetch('/api/settings/delete-recorder', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name}) });
+    await loadSettings();
+    renderAdminSettings();
+}
 
-function adminAddMeter() {
+async function adminAddMeter() {
     const id = document.getElementById('admin-meter-id').value.trim();
     const name = document.getElementById('admin-meter-name').value.trim();
     const type = document.getElementById('admin-meter-type').value;
     if(id && name) {
         if(appMeters.find(m => m.id === id)) return alert('รหัสจุดซ้ำ!');
-        appMeters.push({id, name, type});
-        localStorage.setItem('appMeters', JSON.stringify(appMeters));
+        await fetch('/api/settings/add-meter', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id, name, type}) });
         document.getElementById('admin-meter-id').value = ''; document.getElementById('admin-meter-name').value = '';
+        await loadSettings();
         renderAdminSettings();
     } else { alert('กรอกข้อมูลให้ครบ'); }
 }
-function removeMeter(i) { appMeters.splice(i, 1); localStorage.setItem('appMeters', JSON.stringify(appMeters)); renderAdminSettings(); }
+async function removeMeter(i) {
+    const id = appMeters[i].id;
+    await fetch('/api/settings/delete-meter', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id}) });
+    await loadSettings();
+    renderAdminSettings();
+}
 
 function clearHistoryData() {
     if(confirm('ยืนยันล้างประวัติการจดทั้งหมด?')) {
@@ -759,9 +783,12 @@ async function saveEditRecord() {
 }
 
 // เริ่มทำงานเมื่อเปิดหน้าเว็บ
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
     initTheme();
     updateDashboardStats();
+
+    // รอโหลดข้อมูลมิเตอร์จากเซิร์ฟเวอร์ก่อน
+    await loadSettings();
 
     // In-App Browser Detect
     const ua = navigator.userAgent || navigator.vendor || window.opera;

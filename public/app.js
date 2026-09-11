@@ -38,17 +38,43 @@ async function loadSettings() {
                 rSelect.appendChild(opt);
             });
             
+            // Add "อื่น ๆ"
+            const optOther = document.createElement('option');
+            optOther.value = 'other';
+            optOther.textContent = 'อื่น ๆ (ระบุเอง)';
+            rSelect.appendChild(optOther);
+            
             // Try load last recorder
             const savedRecorder = localStorage.getItem('lastRecorder');
-            if (savedRecorder && appRecorders.includes(savedRecorder)) {
-                rSelect.value = savedRecorder;
+            if (savedRecorder) {
+                if (appRecorders.includes(savedRecorder)) {
+                    rSelect.value = savedRecorder;
+                } else {
+                    rSelect.value = 'other';
+                    document.getElementById('recorder-other').classList.remove('hidden');
+                    document.getElementById('recorder-other').value = savedRecorder;
+                }
             }
 
             document.getElementById('loading-settings').classList.add('hidden');
             document.getElementById('form-container').classList.remove('hidden');
             
             mSelect.addEventListener('change', onMeterSelect);
-            rSelect.addEventListener('change', (e) => localStorage.setItem('lastRecorder', e.target.value));
+            
+            rSelect.addEventListener('change', (e) => {
+                const val = e.target.value;
+                if (val === 'other') {
+                    document.getElementById('recorder-other').classList.remove('hidden');
+                    localStorage.setItem('lastRecorder', document.getElementById('recorder-other').value.trim());
+                } else {
+                    document.getElementById('recorder-other').classList.add('hidden');
+                    localStorage.setItem('lastRecorder', val);
+                }
+            });
+            
+            document.getElementById('recorder-other').addEventListener('input', (e) => {
+                localStorage.setItem('lastRecorder', e.target.value.trim());
+            });
         }
     } catch (e) {
         alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณารีเฟรชหน้าเว็บ');
@@ -123,8 +149,12 @@ async function handleFile(event, code) {
 }
 
 async function submitPhotos() {
-    const recorder = document.getElementById('recorder-select').value;
-    if (!activeMeter || !recorder) return alert('กรุณาเลือกจุดมิเตอร์และชื่อผู้จด');
+    let recorder = document.getElementById('recorder-select').value;
+    if (recorder === 'other') {
+        recorder = document.getElementById('recorder-other').value.trim();
+    }
+    
+    if (!activeMeter || !recorder) return alert('กรุณาเลือกจุดมิเตอร์และระบุชื่อผู้จดให้เรียบร้อย');
 
     // ตรวจสอบว่าถ่ายรูปอย่างน้อย 1 รูป
     const uploadedPhotos = photoSlots.filter(s => s.file);

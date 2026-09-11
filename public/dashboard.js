@@ -280,12 +280,15 @@ function renderDataTables(electric, water, container, mode) {
             const isFilled = r['010'] !== null || r['011'] !== null || r['012'] !== null;
             const canEdit = mode === 'edit' || (mode === 'today' && !isFilled);
             
+            const meterObj = appMeters.find(m => m.id === r["House Number"]);
+            const meterName = meterObj ? meterObj.name : 'ไม่ทราบชื่อจุด';
+            
             html += `
             <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow mb-4 border-l-4 ${mode === 'edit' ? 'border-yellow-500' : 'border-blue-500'}">
                 <div class="flex justify-between items-start mb-2">
                     <div>
-                        <span class="font-bold text-lg">${r["House Number"]}</span>
-                        <span class="text-sm text-gray-500 ml-2">ผู้จด: ${r.recorder_name}</span>
+                        <span class="font-bold text-lg">${meterName}</span>
+                        <span class="text-sm text-gray-500 ml-2">(รหัส: ${r["House Number"]}) | ผู้จด: ${r.recorder_name}</span>
                     </div>
                     <div class="text-xs text-gray-400">${new Date(r.created_at).toLocaleTimeString('th-TH')}</div>
                 </div>
@@ -331,12 +334,15 @@ function renderDataTables(electric, water, container, mode) {
             const isFilled = r.water_value !== null;
             const canEdit = mode === 'edit' || (mode === 'today' && !isFilled);
             
+            const meterObj = appMeters.find(m => m.id === r["House Number"]);
+            const meterName = meterObj ? meterObj.name : 'ไม่ทราบชื่อจุด';
+            
             html += `
             <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow border-t-4 ${mode === 'edit' ? 'border-yellow-500' : 'border-teal-500'} flex flex-col">
                 <div class="flex justify-between items-start mb-2">
                     <div>
-                        <span class="font-bold text-lg">${r["House Number"]}</span>
-                        <span class="text-sm text-gray-500 block">ผู้จด: ${r.recorder_name}</span>
+                        <span class="font-bold text-lg">${meterName}</span>
+                        <span class="text-sm text-gray-500 block">(รหัส: ${r["House Number"]}) | ผู้จด: ${r.recorder_name}</span>
                     </div>
                     <div class="text-xs text-gray-400">${new Date(r.created_at).toLocaleTimeString('th-TH')}</div>
                 </div>

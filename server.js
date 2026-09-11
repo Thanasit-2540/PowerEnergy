@@ -112,7 +112,26 @@ app.post('/api/save-photos', upload.array('images', 3), async (req, res) => {
 });
 
 // ==========================================
-// 2. Admin API: Get Records by Date
+// 2. Admin API: Check for new updates
+// ==========================================
+app.get('/api/check-update', async (req, res) => {
+    try {
+        if (!supabase) return res.json({ latest: 0 });
+        const { data: eData } = await supabase.from('electric_readings').select('created_at').order('created_at', { ascending: false }).limit(1);
+        const { data: wData } = await supabase.from('water_readings').select('created_at').order('created_at', { ascending: false }).limit(1);
+        
+        let latest = 0;
+        if (eData && eData.length > 0) latest = Math.max(latest, new Date(eData[0].created_at).getTime());
+        if (wData && wData.length > 0) latest = Math.max(latest, new Date(wData[0].created_at).getTime());
+        
+        res.json({ latest });
+    } catch (error) {
+        res.json({ latest: 0 });
+    }
+});
+
+// ==========================================
+// 3. Admin API: Get Records by Date
 // ==========================================
 app.get('/api/records', async (req, res) => {
     try {

@@ -1,5 +1,6 @@
 let appMeters = [];
 let appRecorders = [];
+let lastKnownUpdate = 0;
 
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('history-date').value = new Date().toLocaleDateString('en-CA');
@@ -213,12 +214,47 @@ async function loadDataForDate(dateStr, containerId, mode) {
     const res = await fetch('/api/records?date=' + dateStr);
     const json = await res.json();
     
-    if(json.success) {
+    if (json.success) {
         renderDataTables(json.electric, json.water, container, mode);
+        updateLastKnownUpdate();
     } else {
         container.innerHTML = '<div class="text-red-500">Error loading data</div>';
     }
 }
+
+async function updateLastKnownUpdate() {
+    try {
+        const res = await fetch('/api/check-update');
+        const json = await res.json();
+        lastKnownUpdate = json.latest;
+    } catch(e) {}
+}
+
+// Auto-Refresh แบบอัจฉริยะทุก 15 วินาที
+setInterval(async () => {
+    // ถ้ายูสเซอร์กำลังคลิกพิมพ์ข้อมูลอยู่ (กล่อง input) ห้ามรีเฟรชเด็ดขาด
+    if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+
+    // เช็คว่าเปิดแท็บไหนอยู่
+    const todayTab = document.getElementById('view-today');
+    const historyTab = document.getElementById('view-history');
+    
+    if ((todayTab && todayTab.classList.contains('active')) || (historyTab && historyTab.classList.contains('active'))) {
+        try {
+            const res = await fetch('/api/check-update');
+            const json = await res.json();
+            
+            // ถ้าระบบเจอว่ามีข้อมูลใหม่ที่เวลาใหม่กว่าของเดิมบนหน้าจอ ถึงจะสั่งโหลดใหม่
+            if (json.latest > lastKnownUpdate) {
+                if (todayTab.classList.contains('active')) {
+                    loadDataForDate(new Date().toLocaleDateString('en-CA'), 'today-container', 'today');
+                } else {
+                    loadHistoryData();
+                }
+            }
+        } catch(e) {}
+    }
+}, 60000);
 
 // Image Viewer Modal
 function openImageModal(src) {

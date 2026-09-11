@@ -241,7 +241,7 @@ function renderDataTables(electric, water, container, mode) {
         html += `<div class="bg-white dark:bg-gray-800 p-4 rounded shadow text-gray-500 text-center">ไม่มีข้อมูลไฟฟ้า</div>`;
     } else {
         electric.forEach(r => {
-            const isFilled = r['010'] !== null && r['011'] !== null && r['012'] !== null;
+            const isFilled = r['010'] !== null || r['011'] !== null || r['012'] !== null;
             const canEdit = mode === 'edit' || (mode === 'today' && !isFilled);
             
             html += `

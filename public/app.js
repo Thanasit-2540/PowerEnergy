@@ -126,10 +126,10 @@ async function submitPhotos() {
     const recorder = document.getElementById('recorder-select').value;
     if (!activeMeter || !recorder) return alert('กรุณาเลือกจุดมิเตอร์และชื่อผู้จด');
 
-    // ตรวจสอบว่าถ่ายรูปครบไหม
-    const missingPhotos = photoSlots.filter(s => !s.file);
-    if (missingPhotos.length > 0) {
-        return alert(`กรุณาถ่ายรูปให้ครบทุกช่อง (ขาดอีก ${missingPhotos.length} รูป)`);
+    // ตรวจสอบว่าถ่ายรูปอย่างน้อย 1 รูป
+    const uploadedPhotos = photoSlots.filter(s => s.file);
+    if (uploadedPhotos.length === 0) {
+        return alert(`กรุณาถ่ายรูปอย่างน้อย 1 รูป`);
     }
 
     const btn = document.getElementById('btn-submit');
@@ -147,10 +147,11 @@ async function submitPhotos() {
         formData.append('meterId', activeMeter.id);
         formData.append('meterType', activeMeter.type);
         
-        const slotCodes = photoSlots.map(s => s.code);
+        const uploadedSlots = photoSlots.filter(s => s.file);
+        const slotCodes = uploadedSlots.map(s => s.code);
         formData.append('slots', JSON.stringify(slotCodes));
 
-        photoSlots.forEach(s => {
+        uploadedSlots.forEach(s => {
             formData.append('images', s.file, `${s.code}.jpg`);
         });
 

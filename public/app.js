@@ -137,6 +137,10 @@ async function submitPhotos() {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> กำลังส่งรูปขึ้นระบบ...';
     btn.disabled = true;
 
+    const statusMsg = document.getElementById('status-message');
+    statusMsg.classList.add('hidden');
+    statusMsg.className = 'text-center font-bold text-lg mt-4'; // Reset classes
+    
     try {
         const formData = new FormData();
         formData.append('recorderName', recorder);
@@ -154,13 +158,23 @@ async function submitPhotos() {
         const json = await res.json();
 
         if (json.success) {
-            alert(json.message); // บอกว่าบันทึกใหม่ หรือถ่ายซ้ำสำเร็จ
-            window.location.reload(); // รีเฟรชหน้า
+            statusMsg.textContent = '✅ ' + json.message;
+            statusMsg.classList.add('text-green-500');
+            statusMsg.classList.remove('hidden');
+            
+            // รอ 2 วินาทีแล้วรีเซ็ตหน้าจอใหม่
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
         } else {
-            alert('เกิดข้อผิดพลาด: ' + json.error);
+            statusMsg.textContent = '❌ เกิดข้อผิดพลาด: ' + json.error;
+            statusMsg.classList.add('text-red-500');
+            statusMsg.classList.remove('hidden');
         }
     } catch (e) {
-        alert('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้');
+        statusMsg.textContent = '❌ เชื่อมต่อเซิร์ฟเวอร์ไม่ได้';
+        statusMsg.classList.add('text-red-500');
+        statusMsg.classList.remove('hidden');
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;

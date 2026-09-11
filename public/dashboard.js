@@ -220,6 +220,17 @@ async function loadDataForDate(dateStr, containerId, mode) {
     }
 }
 
+// Image Viewer Modal
+function openImageModal(src) {
+    document.getElementById('image-modal-img').src = src;
+    document.getElementById('image-modal').classList.remove('hidden');
+}
+
+function closeImageModal() {
+    document.getElementById('image-modal').classList.add('hidden');
+    document.getElementById('image-modal-img').src = '';
+}
+
 // mode = 'today' (กรอกได้ถ้ายังว่าง), 'history' (อ่านอย่างเดียว), 'edit' (แอดมินแก้ได้เสมอ)
 function renderDataTables(electric, water, container, mode) {
     let html = '';
@@ -247,26 +258,26 @@ function renderDataTables(electric, water, container, mode) {
                     <!-- 010 -->
                     <div>
                         <div class="text-xs mb-1 font-bold">หน้าจอ 010</div>
-                        ${r.IMG010 ? `<a href="${r.IMG010}" target="_blank"><img src="${r.IMG010}" class="w-full h-32 object-cover rounded mb-2 border"></a>` : '<div class="h-32 bg-gray-100 rounded mb-2 flex items-center justify-center text-xs">ไม่มีรูป</div>'}
-                        ${canEdit ? `<input type="number" step="0.001" id="val-010-${r.id}" value="${r['010'] || ''}" placeholder="กรอกเลข 010" class="w-full p-2 border rounded dark:bg-gray-700 outline-none focus:ring-2 focus:ring-blue-500">` : `<div class="p-2 bg-gray-100 dark:bg-gray-700 rounded font-bold">${r['010'] || '-'}</div>`}
+                        ${r.IMG010 ? `<img src="${r.IMG010}" onclick="openImageModal('${r.IMG010}')" class="w-full h-40 object-contain bg-black rounded mb-2 border dark:border-gray-600 cursor-pointer hover:opacity-80 transition">` : '<div class="h-40 bg-gray-100 dark:bg-gray-700 rounded mb-2 flex items-center justify-center text-xs">ไม่มีรูป</div>'}
+                        ${canEdit ? `<input type="number" step="0.001" id="val-010-${r.id}" value="${r['010'] || ''}" placeholder="กรอกเลข 010" class="w-full p-2 border rounded dark:bg-gray-700 outline-none focus:ring-2 focus:ring-blue-500">` : `<div class="p-2 bg-gray-100 dark:bg-gray-700 rounded font-bold text-center text-lg">${r['010'] || '-'}</div>`}
                     </div>
                     <!-- 011 -->
                     <div>
                         <div class="text-xs mb-1 font-bold">หน้าจอ 011</div>
-                        ${r.IMG011 ? `<a href="${r.IMG011}" target="_blank"><img src="${r.IMG011}" class="w-full h-32 object-cover rounded mb-2 border"></a>` : '<div class="h-32 bg-gray-100 rounded mb-2 flex items-center justify-center text-xs">ไม่มีรูป</div>'}
-                        ${canEdit ? `<input type="number" step="0.001" id="val-011-${r.id}" value="${r['011'] || ''}" placeholder="กรอกเลข 011" class="w-full p-2 border rounded dark:bg-gray-700 outline-none focus:ring-2 focus:ring-blue-500">` : `<div class="p-2 bg-gray-100 dark:bg-gray-700 rounded font-bold">${r['011'] || '-'}</div>`}
+                        ${r.IMG011 ? `<img src="${r.IMG011}" onclick="openImageModal('${r.IMG011}')" class="w-full h-40 object-contain bg-black rounded mb-2 border dark:border-gray-600 cursor-pointer hover:opacity-80 transition">` : '<div class="h-40 bg-gray-100 dark:bg-gray-700 rounded mb-2 flex items-center justify-center text-xs">ไม่มีรูป</div>'}
+                        ${canEdit ? `<input type="number" step="0.001" id="val-011-${r.id}" value="${r['011'] || ''}" placeholder="กรอกเลข 011" class="w-full p-2 border rounded dark:bg-gray-700 outline-none focus:ring-2 focus:ring-blue-500">` : `<div class="p-2 bg-gray-100 dark:bg-gray-700 rounded font-bold text-center text-lg">${r['011'] || '-'}</div>`}
                     </div>
                     <!-- 012 -->
                     <div>
                         <div class="text-xs mb-1 font-bold">หน้าจอ 012</div>
-                        ${r.IMG012 ? `<a href="${r.IMG012}" target="_blank"><img src="${r.IMG012}" class="w-full h-32 object-cover rounded mb-2 border"></a>` : '<div class="h-32 bg-gray-100 rounded mb-2 flex items-center justify-center text-xs">ไม่มีรูป</div>'}
-                        ${canEdit ? `<input type="number" step="0.001" id="val-012-${r.id}" value="${r['012'] || ''}" placeholder="กรอกเลข 012" class="w-full p-2 border rounded dark:bg-gray-700 outline-none focus:ring-2 focus:ring-blue-500">` : `<div class="p-2 bg-gray-100 dark:bg-gray-700 rounded font-bold">${r['012'] || '-'}</div>`}
+                        ${r.IMG012 ? `<img src="${r.IMG012}" onclick="openImageModal('${r.IMG012}')" class="w-full h-40 object-contain bg-black rounded mb-2 border dark:border-gray-600 cursor-pointer hover:opacity-80 transition">` : '<div class="h-40 bg-gray-100 dark:bg-gray-700 rounded mb-2 flex items-center justify-center text-xs">ไม่มีรูป</div>'}
+                        ${canEdit ? `<input type="number" step="0.001" id="val-012-${r.id}" value="${r['012'] || ''}" placeholder="กรอกเลข 012" class="w-full p-2 border rounded dark:bg-gray-700 outline-none focus:ring-2 focus:ring-blue-500">` : `<div class="p-2 bg-gray-100 dark:bg-gray-700 rounded font-bold text-center text-lg">${r['012'] || '-'}</div>`}
                     </div>
                 </div>
                 ${canEdit ? `
-                    <div class="flex items-center">
-                        <button onclick="saveValues('${r.id}', 'electric', '${mode}')" class="${mode === 'edit' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-600 hover:bg-blue-700'} text-white px-6 py-2 rounded font-bold"><i class="fa-solid fa-save mr-2"></i>บันทึกค่า</button>
-                        <span id="status-${mode}-${r.id}" class="ml-4 text-green-500 text-sm hidden font-bold"><i class="fa-solid fa-check mr-1"></i>บันทึกแล้ว!</span>
+                    <div class="flex items-center justify-end mt-2">
+                        <span id="status-${mode}-${r.id}" class="mr-4 text-green-500 text-sm hidden font-bold"><i class="fa-solid fa-check mr-1"></i>บันทึกแล้ว!</span>
+                        <button onclick="saveValues('${r.id}', 'electric', '${mode}')" class="${mode === 'edit' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-600 hover:bg-blue-700'} text-white px-8 py-2 rounded font-bold"><i class="fa-solid fa-save mr-2"></i>บันทึกค่า</button>
                     </div>
                 ` : ``}
             </div>
@@ -296,7 +307,7 @@ function renderDataTables(electric, water, container, mode) {
                 <div class="flex flex-col md:flex-row gap-4 mb-4">
                     <div class="md:w-1/3">
                         <div class="text-xs mb-1 font-bold">หน้าปัดน้ำ</div>
-                        ${r.water_img ? `<a href="${r.water_img}" target="_blank"><img src="${r.water_img}" class="w-full h-48 object-cover rounded border"></a>` : '<div class="h-48 bg-gray-100 rounded flex items-center justify-center text-xs">ไม่มีรูป</div>'}
+                        ${r.water_img ? `<img src="${r.water_img}" onclick="openImageModal('${r.water_img}')" class="w-full h-48 object-contain bg-black rounded border dark:border-gray-600 cursor-pointer hover:opacity-80 transition">` : '<div class="h-48 bg-gray-100 dark:bg-gray-700 rounded flex items-center justify-center text-xs">ไม่มีรูป</div>'}
                     </div>
                     <div class="md:w-2/3 flex flex-col justify-center">
                         <label class="text-sm font-bold mb-2">ค่าน้ำ (หน่วย)</label>

@@ -136,14 +136,18 @@ async function manualCleanup() {
 
 // QR Code Logic
 let currentQrId = '';
+let currentQrName = '';
+let currentQrTypeStr = '';
+
 function openQrModal(id, name, type) {
     currentQrId = id;
-    const typeStr = type === 'electric' ? 'ไฟฟ้า' : 'ประปา';
+    currentQrName = name;
+    currentQrTypeStr = type === 'electric' ? 'ไฟฟ้า' : 'ประปา';
     
     document.getElementById('qr-details').innerHTML = `
         <div class="font-bold text-lg">${name}</div>
         <div>รหัสจุด: ${id}</div>
-        <div>ประเภท: ${typeStr}</div>
+        <div>ประเภท: ${currentQrTypeStr}</div>
     `;
     
     document.getElementById('qr-code-display').innerHTML = '';
@@ -162,13 +166,43 @@ function closeQrModal() {
 }
 
 function downloadQR() {
-    const canvas = document.querySelector('#qr-code-display canvas');
-    if(canvas) {
-        const link = document.createElement('a');
-        link.download = `QR_${currentQrId}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-    }
+    const qrCanvas = document.querySelector('#qr-code-display canvas');
+    if(!qrCanvas) return;
+    
+    // สร้าง Canvas ใหม่ที่ใหญ่กว่าเดิมเพื่อใส่ข้อความ
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    canvas.width = 300;
+    canvas.height = 380;
+    
+    // วาดพื้นหลังสีขาว
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // วาด QR Code ตรงกลาง (ขนาด 200x200 เอามาไว้ x=50, y=40)
+    ctx.drawImage(qrCanvas, 50, 40, 200, 200);
+    
+    // ตั้งค่าตัวหนังสือ
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#000000';
+    
+    // วาดชื่อ
+    ctx.font = 'bold 24px sans-serif';
+    ctx.fillText(currentQrName, 150, 280);
+    
+    // วาดรหัส
+    ctx.font = '18px sans-serif';
+    ctx.fillText(`รหัสจุด: ${currentQrId}`, 150, 315);
+    
+    // วาดประเภท
+    ctx.fillText(`ประเภท: ${currentQrTypeStr}`, 150, 345);
+    
+    // ดาวน์โหลดรูปที่รวมทุกอย่างแล้ว
+    const link = document.createElement('a');
+    link.download = `QR_${currentQrName}_${currentQrId}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
 }
 
 // Data Loading & Rendering

@@ -5,7 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>tailwind.config = { darkMode: 'class' }</script>
+    <script>
+        tailwind.config = { darkMode: 'class' };
+        // อ่าน Theme ทันทีก่อนโหลด Body
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+    </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -20,7 +32,7 @@
 
     <header class="bg-gradient-to-r from-gray-800 to-gray-900 text-white p-4 shadow-lg flex justify-between items-center">
         <h1 class="text-xl font-bold tracking-wide"><i class="fa-solid fa-bolt mr-2 text-yellow-400"></i>ศูนย์ข้อมูลกลาง</h1>
-        <button onclick="document.documentElement.classList.toggle('dark')" class="text-white hover:text-yellow-300 transition">
+        <button onclick="toggleTheme()" class="text-white hover:text-yellow-300 transition">
             <i class="fa-solid fa-circle-half-stroke text-xl"></i>
         </button>
     </header>

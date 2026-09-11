@@ -2,10 +2,10 @@ let appMeters = [];
 let appRecorders = [];
 let lastKnownUpdate = 0;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('history-date').value = new Date().toLocaleDateString('en-CA');
     document.getElementById('edit-date').value = new Date().toLocaleDateString('en-CA');
-    loadSettings();
+    await loadSettings();
     loadDataForDate(new Date().toLocaleDateString('en-CA'), 'today-container', 'today');
 });
 
@@ -280,7 +280,7 @@ function renderDataTables(electric, water, container, mode) {
             const isFilled = r['010'] !== null || r['011'] !== null || r['012'] !== null;
             const canEdit = mode === 'edit' || (mode === 'today' && !isFilled);
             
-            const meterObj = appMeters.find(m => m.id === r["House Number"]);
+            const meterObj = appMeters.find(m => String(m.id) === String(r["House Number"]));
             const meterName = meterObj ? meterObj.name : 'ไม่ทราบชื่อจุด';
             
             html += `
@@ -334,7 +334,7 @@ function renderDataTables(electric, water, container, mode) {
             const isFilled = r.water_value !== null;
             const canEdit = mode === 'edit' || (mode === 'today' && !isFilled);
             
-            const meterObj = appMeters.find(m => m.id === r["House Number"]);
+            const meterObj = appMeters.find(m => String(m.id) === String(r["House Number"]));
             const meterName = meterObj ? meterObj.name : 'ไม่ทราบชื่อจุด';
             
             html += `

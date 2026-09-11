@@ -290,41 +290,38 @@ function renderDataTables(electric, water, container, mode) {
     if (water.length === 0) {
         html += `<div class="bg-white dark:bg-gray-800 p-4 rounded shadow text-gray-500 text-center">ไม่มีข้อมูลประปา</div>`;
     } else {
+        html += `<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">`;
         water.forEach(r => {
             const isFilled = r.water_value !== null;
             const canEdit = mode === 'edit' || (mode === 'today' && !isFilled);
             
             html += `
-            <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow mb-4 border-l-4 ${mode === 'edit' ? 'border-yellow-500' : 'border-teal-500'}">
+            <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow border-t-4 ${mode === 'edit' ? 'border-yellow-500' : 'border-teal-500'} flex flex-col">
                 <div class="flex justify-between items-start mb-2">
                     <div>
                         <span class="font-bold text-lg">${r["House Number"]}</span>
-                        <span class="text-sm text-gray-500 ml-2">ผู้จด: ${r.recorder_name}</span>
+                        <span class="text-sm text-gray-500 block">ผู้จด: ${r.recorder_name}</span>
                     </div>
                     <div class="text-xs text-gray-400">${new Date(r.created_at).toLocaleTimeString('th-TH')}</div>
                 </div>
                 
-                <div class="flex flex-col md:flex-row gap-4 mb-4">
-                    <div class="md:w-1/3">
-                        <div class="text-xs mb-1 font-bold">หน้าปัดน้ำ</div>
-                        ${r.water_img ? `<img src="${r.water_img}" onclick="openImageModal('${r.water_img}')" class="w-full h-48 object-contain bg-black rounded border dark:border-gray-600 cursor-pointer hover:opacity-80 transition">` : '<div class="h-48 bg-gray-100 dark:bg-gray-700 rounded flex items-center justify-center text-xs">ไม่มีรูป</div>'}
-                    </div>
-                    <div class="md:w-2/3 flex flex-col justify-center">
-                        <label class="text-sm font-bold mb-2">ค่าน้ำ (หน่วย)</label>
-                        ${canEdit ? `
-                            <input type="number" step="0.001" id="val-water-${r.id}" value="${r.water_value || ''}" placeholder="กรอกตัวเลขหน้าปัด" class="w-full p-3 border rounded text-lg dark:bg-gray-700 outline-none focus:ring-2 focus:ring-teal-500 mb-4">
-                            <div class="flex items-center">
-                                <button onclick="saveValues('${r.id}', 'water', '${mode}')" class="${mode === 'edit' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-teal-600 hover:bg-teal-700'} text-white px-8 py-3 rounded font-bold"><i class="fa-solid fa-save mr-2"></i>บันทึกค่าน้ำ</button>
-                                <span id="status-${mode}-${r.id}" class="ml-4 text-green-500 font-bold hidden"><i class="fa-solid fa-check mr-1"></i>บันทึกแล้ว!</span>
-                            </div>
-                        ` : `
-                            <div class="p-4 bg-gray-100 dark:bg-gray-700 rounded text-xl font-bold">${r.water_value || '-'}</div>
-                        `}
-                    </div>
+                <div class="flex-1">
+                    <div class="text-xs mb-1 font-bold">หน้าปัดน้ำ</div>
+                    ${r.water_img ? `<img src="${r.water_img}" onclick="openImageModal('${r.water_img}')" class="w-full h-40 object-contain bg-black rounded mb-2 border dark:border-gray-600 cursor-pointer hover:opacity-80 transition">` : '<div class="h-40 bg-gray-100 dark:bg-gray-700 rounded mb-2 flex items-center justify-center text-xs">ไม่มีรูป</div>'}
+                    
+                    ${canEdit ? `<input type="number" step="0.001" id="val-water-${r.id}" value="${r.water_value || ''}" placeholder="กรอกตัวเลขหน้าปัด" class="w-full p-2 border rounded dark:bg-gray-700 outline-none focus:ring-2 focus:ring-blue-500 mb-2">` : `<div class="p-2 bg-gray-100 dark:bg-gray-700 rounded font-bold text-center text-lg mb-2">${r.water_value || '-'}</div>`}
                 </div>
+                
+                ${canEdit ? `
+                    <div class="mt-2 text-center">
+                        <span id="status-${mode}-${r.id}" class="text-green-500 text-sm hidden font-bold mb-1 block"><i class="fa-solid fa-check mr-1"></i>บันทึกแล้ว!</span>
+                        <button onclick="saveValues('${r.id}', 'water', '${mode}')" class="w-full ${mode === 'edit' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-teal-600 hover:bg-teal-700'} text-white py-2 rounded font-bold"><i class="fa-solid fa-save mr-2"></i>บันทึกค่าน้ำ</button>
+                    </div>
+                ` : ``}
             </div>
             `;
         });
+        html += `</div>`;
     }
 
     container.innerHTML = html;

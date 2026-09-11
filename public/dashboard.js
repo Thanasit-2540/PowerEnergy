@@ -118,7 +118,7 @@ function openQrModal(id, name, type) {
     `;
     
     document.getElementById('qr-code-display').innerHTML = '';
-    const url = window.location.origin + '/?meter=' + id;
+    const url = window.location.origin + '/scan.html?meter=' + id;
     new QRCode(document.getElementById('qr-code-display'), {
         text: url,
         width: 200,

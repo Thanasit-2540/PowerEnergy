@@ -3,23 +3,30 @@ let appRecorders = [];
 
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('history-date').value = new Date().toLocaleDateString('en-CA');
+    document.getElementById('edit-date').value = new Date().toLocaleDateString('en-CA');
+    loadSettings();
+    loadDataForDate(new Date().toLocaleDateString('en-CA'), 'today-container', 'today');
 });
 
-async function login() {
-    const pass = document.getElementById('admin-pass').value;
-    if (!pass) return;
+async function tryOpenSettings() {
+    const pass = prompt('กรุณาใส่รหัสผ่านเพื่อเข้าสู่โหมดแอดมิน:');
+    if (pass === null) return; // User cancelled
+    
     const res = await fetch('/api/verify-admin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: pass })
     });
     const json = await res.json();
+    
     if (json.success) {
-        document.getElementById('login-modal').classList.add('hidden');
-        loadSettings();
-        loadDataForDate(new Date().toLocaleDateString('en-CA'), 'today-container');
+        showTab('settings');
+        // เติมรายชื่อจุดมิเตอร์ลงใน Dropdown สำหรับค้นหา
+        const ms = document.getElementById('edit-meter-select');
+        ms.innerHTML = '<option value="">-- เลือกจุดมิเตอร์ที่ต้องการแก้ --</option>' + 
+                       appMeters.map(m => `<option value="${m.id}">${m.name} (รหัส: ${m.id})</option>`).join('');
     } else {
-        alert('รหัสผ่านไม่ถูกต้อง');
+        alert('รหัสผ่านไม่ถูกต้อง!');
     }
 }
 
@@ -133,7 +140,6 @@ function closeQrModal() {
 }
 
 function downloadQR() {
-    // ใช้วิธีเปลี่ยน canvas เป็น img แล้วโหลด
     const canvas = document.querySelector('#qr-code-display canvas');
     if(canvas) {
         const link = document.createElement('a');
@@ -143,8 +149,43 @@ function downloadQR() {
     }
 }
 
-// Data Loading Logic
-async function loadDataForDate(dateStr, containerId) {
+// Data Loading & Rendering
+function loadHistoryData() {
+    const dateStr = document.getElementById('history-date').value;
+    if (dateStr) {
+        loadDataForDate(dateStr, 'history-container', 'history');
+    }
+}
+
+async function loadDataForEdit() {
+    const dateStr = document.getElementById('edit-date').value;
+    const meterId = document.getElementById('edit-meter-select').value;
+    
+    if (!dateStr || !meterId) return alert('กรุณาเลือกวันที่ และ จุดมิเตอร์');
+    
+    const container = document.getElementById('edit-container');
+    container.innerHTML = '<div class="text-center py-4"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>';
+    
+    const res = await fetch('/api/records?date=' + dateStr);
+    const json = await res.json();
+    
+    if (json.success) {
+        // กรองเอาเฉพาะ meter ที่เลือก
+        const el = json.electric.filter(r => r["House Number"] === meterId);
+        const wa = json.water.filter(r => r["House Number"] === meterId);
+        
+        if (el.length === 0 && wa.length === 0) {
+            container.innerHTML = '<div class="text-red-500 font-bold p-4 bg-red-50 rounded">ไม่พบข้อมูลของจุดมิเตอร์นี้ในวันที่เลือก (อาจยังไม่มีคนจด)</div>';
+            return;
+        }
+        
+        renderDataTables(el, wa, container, 'edit');
+    } else {
+        container.innerHTML = '<div class="text-red-500">Error loading data</div>';
+    }
+}
+
+async function loadDataForDate(dateStr, containerId, mode) {
     const container = document.getElementById(containerId);
     container.innerHTML = '<div class="text-center py-10"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></div>';
     
@@ -152,13 +193,14 @@ async function loadDataForDate(dateStr, containerId) {
     const json = await res.json();
     
     if(json.success) {
-        renderDataTables(json.electric, json.water, container);
+        renderDataTables(json.electric, json.water, container, mode);
     } else {
         container.innerHTML = '<div class="text-red-500">Error loading data</div>';
     }
 }
 
-function renderDataTables(electric, water, container) {
+// mode = 'today' (กรอกได้ถ้ายังว่าง), 'history' (อ่านอย่างเดียว), 'edit' (แอดมินแก้ได้เสมอ)
+function renderDataTables(electric, water, container, mode) {
     let html = '';
 
     // ไฟฟ้า
@@ -167,8 +209,11 @@ function renderDataTables(electric, water, container) {
         html += `<div class="bg-white dark:bg-gray-800 p-4 rounded shadow text-gray-500 text-center">ไม่มีข้อมูลไฟฟ้า</div>`;
     } else {
         electric.forEach(r => {
+            const isFilled = r['010'] !== null && r['011'] !== null && r['012'] !== null;
+            const canEdit = mode === 'edit' || (mode === 'today' && !isFilled);
+            
             html += `
-            <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow mb-4 border-l-4 border-blue-500">
+            <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow mb-4 border-l-4 ${mode === 'edit' ? 'border-yellow-500' : 'border-blue-500'}">
                 <div class="flex justify-between items-start mb-2">
                     <div>
                         <span class="font-bold text-lg">${r["House Number"]}</span>
@@ -180,25 +225,29 @@ function renderDataTables(electric, water, container) {
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                     <!-- 010 -->
                     <div>
-                        <div class="text-xs mb-1">หน้าจอ 010</div>
+                        <div class="text-xs mb-1 font-bold">หน้าจอ 010</div>
                         ${r.IMG010 ? `<a href="${r.IMG010}" target="_blank"><img src="${r.IMG010}" class="w-full h-32 object-cover rounded mb-2 border"></a>` : '<div class="h-32 bg-gray-100 rounded mb-2 flex items-center justify-center text-xs">ไม่มีรูป</div>'}
-                        <input type="number" step="0.001" id="val-010-${r.id}" value="${r['010'] || ''}" placeholder="กรอกเลข 010" class="w-full p-2 border rounded dark:bg-gray-700 outline-none focus:ring-2 focus:ring-blue-500">
+                        ${canEdit ? `<input type="number" step="0.001" id="val-010-${r.id}" value="${r['010'] || ''}" placeholder="กรอกเลข 010" class="w-full p-2 border rounded dark:bg-gray-700 outline-none focus:ring-2 focus:ring-blue-500">` : `<div class="p-2 bg-gray-100 dark:bg-gray-700 rounded font-bold">${r['010'] || '-'}</div>`}
                     </div>
                     <!-- 011 -->
                     <div>
-                        <div class="text-xs mb-1">หน้าจอ 011</div>
+                        <div class="text-xs mb-1 font-bold">หน้าจอ 011</div>
                         ${r.IMG011 ? `<a href="${r.IMG011}" target="_blank"><img src="${r.IMG011}" class="w-full h-32 object-cover rounded mb-2 border"></a>` : '<div class="h-32 bg-gray-100 rounded mb-2 flex items-center justify-center text-xs">ไม่มีรูป</div>'}
-                        <input type="number" step="0.001" id="val-011-${r.id}" value="${r['011'] || ''}" placeholder="กรอกเลข 011" class="w-full p-2 border rounded dark:bg-gray-700 outline-none focus:ring-2 focus:ring-blue-500">
+                        ${canEdit ? `<input type="number" step="0.001" id="val-011-${r.id}" value="${r['011'] || ''}" placeholder="กรอกเลข 011" class="w-full p-2 border rounded dark:bg-gray-700 outline-none focus:ring-2 focus:ring-blue-500">` : `<div class="p-2 bg-gray-100 dark:bg-gray-700 rounded font-bold">${r['011'] || '-'}</div>`}
                     </div>
                     <!-- 012 -->
                     <div>
-                        <div class="text-xs mb-1">หน้าจอ 012</div>
+                        <div class="text-xs mb-1 font-bold">หน้าจอ 012</div>
                         ${r.IMG012 ? `<a href="${r.IMG012}" target="_blank"><img src="${r.IMG012}" class="w-full h-32 object-cover rounded mb-2 border"></a>` : '<div class="h-32 bg-gray-100 rounded mb-2 flex items-center justify-center text-xs">ไม่มีรูป</div>'}
-                        <input type="number" step="0.001" id="val-012-${r.id}" value="${r['012'] || ''}" placeholder="กรอกเลข 012" class="w-full p-2 border rounded dark:bg-gray-700 outline-none focus:ring-2 focus:ring-blue-500">
+                        ${canEdit ? `<input type="number" step="0.001" id="val-012-${r.id}" value="${r['012'] || ''}" placeholder="กรอกเลข 012" class="w-full p-2 border rounded dark:bg-gray-700 outline-none focus:ring-2 focus:ring-blue-500">` : `<div class="p-2 bg-gray-100 dark:bg-gray-700 rounded font-bold">${r['012'] || '-'}</div>`}
                     </div>
                 </div>
-                <button onclick="saveValues('${r.id}', 'electric')" class="bg-blue-600 text-white px-6 py-2 rounded font-bold hover:bg-blue-700"><i class="fa-solid fa-save mr-2"></i>บันทึกค่า</button>
-                <span id="status-${r.id}" class="ml-4 text-green-500 text-sm hidden">บันทึกแล้ว!</span>
+                ${canEdit ? `
+                    <div class="flex items-center">
+                        <button onclick="saveValues('${r.id}', 'electric', '${mode}')" class="${mode === 'edit' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-600 hover:bg-blue-700'} text-white px-6 py-2 rounded font-bold"><i class="fa-solid fa-save mr-2"></i>บันทึกค่า</button>
+                        <span id="status-${mode}-${r.id}" class="ml-4 text-green-500 text-sm hidden font-bold"><i class="fa-solid fa-check mr-1"></i>บันทึกแล้ว!</span>
+                    </div>
+                ` : ``}
             </div>
             `;
         });
@@ -210,8 +259,11 @@ function renderDataTables(electric, water, container) {
         html += `<div class="bg-white dark:bg-gray-800 p-4 rounded shadow text-gray-500 text-center">ไม่มีข้อมูลประปา</div>`;
     } else {
         water.forEach(r => {
+            const isFilled = r.water_value !== null;
+            const canEdit = mode === 'edit' || (mode === 'today' && !isFilled);
+            
             html += `
-            <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow mb-4 border-l-4 border-teal-500">
+            <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow mb-4 border-l-4 ${mode === 'edit' ? 'border-yellow-500' : 'border-teal-500'}">
                 <div class="flex justify-between items-start mb-2">
                     <div>
                         <span class="font-bold text-lg">${r["House Number"]}</span>
@@ -222,16 +274,20 @@ function renderDataTables(electric, water, container) {
                 
                 <div class="flex flex-col md:flex-row gap-4 mb-4">
                     <div class="md:w-1/3">
-                        <div class="text-xs mb-1">หน้าปัดน้ำ</div>
+                        <div class="text-xs mb-1 font-bold">หน้าปัดน้ำ</div>
                         ${r.water_img ? `<a href="${r.water_img}" target="_blank"><img src="${r.water_img}" class="w-full h-48 object-cover rounded border"></a>` : '<div class="h-48 bg-gray-100 rounded flex items-center justify-center text-xs">ไม่มีรูป</div>'}
                     </div>
                     <div class="md:w-2/3 flex flex-col justify-center">
                         <label class="text-sm font-bold mb-2">ค่าน้ำ (หน่วย)</label>
-                        <input type="number" step="0.001" id="val-water-${r.id}" value="${r.water_value || ''}" placeholder="กรอกตัวเลขหน้าปัด" class="w-full p-3 border rounded text-lg dark:bg-gray-700 outline-none focus:ring-2 focus:ring-teal-500 mb-4">
-                        <div class="flex items-center">
-                            <button onclick="saveValues('${r.id}', 'water')" class="bg-teal-600 text-white px-8 py-3 rounded font-bold hover:bg-teal-700"><i class="fa-solid fa-save mr-2"></i>บันทึกค่าน้ำ</button>
-                            <span id="status-${r.id}" class="ml-4 text-green-500 font-bold hidden">บันทึกแล้ว!</span>
-                        </div>
+                        ${canEdit ? `
+                            <input type="number" step="0.001" id="val-water-${r.id}" value="${r.water_value || ''}" placeholder="กรอกตัวเลขหน้าปัด" class="w-full p-3 border rounded text-lg dark:bg-gray-700 outline-none focus:ring-2 focus:ring-teal-500 mb-4">
+                            <div class="flex items-center">
+                                <button onclick="saveValues('${r.id}', 'water', '${mode}')" class="${mode === 'edit' ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-teal-600 hover:bg-teal-700'} text-white px-8 py-3 rounded font-bold"><i class="fa-solid fa-save mr-2"></i>บันทึกค่าน้ำ</button>
+                                <span id="status-${mode}-${r.id}" class="ml-4 text-green-500 font-bold hidden"><i class="fa-solid fa-check mr-1"></i>บันทึกแล้ว!</span>
+                            </div>
+                        ` : `
+                            <div class="p-4 bg-gray-100 dark:bg-gray-700 rounded text-xl font-bold">${r.water_value || '-'}</div>
+                        `}
                     </div>
                 </div>
             </div>
@@ -242,7 +298,7 @@ function renderDataTables(electric, water, container) {
     container.innerHTML = html;
 }
 
-async function saveValues(id, type) {
+async function saveValues(id, type, mode) {
     let values = {};
     if (type === 'electric') {
         values['010'] = document.getElementById(`val-010-${id}`).value || null;
@@ -260,9 +316,15 @@ async function saveValues(id, type) {
     
     const json = await res.json();
     if(json.success) {
-        const stat = document.getElementById(`status-${id}`);
+        const stat = document.getElementById(`status-${mode}-${id}`);
         stat.classList.remove('hidden');
-        setTimeout(() => stat.classList.add('hidden'), 2000);
+        setTimeout(() => {
+            stat.classList.add('hidden');
+            // ถ้ายืนยันจากหน้า Today ให้รีโหลดใหม่เพื่อล็อคฟอร์ม
+            if (mode === 'today') {
+                loadDataForDate(new Date().toLocaleDateString('en-CA'), 'today-container', 'today');
+            }
+        }, 1500);
     } else {
         alert('บันทึกผิดพลาด!');
     }

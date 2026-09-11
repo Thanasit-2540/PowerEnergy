@@ -25,8 +25,28 @@ async function tryOpenSettings() {
         const ms = document.getElementById('edit-meter-select');
         ms.innerHTML = '<option value="">-- เลือกจุดมิเตอร์ที่ต้องการแก้ --</option>' + 
                        appMeters.map(m => `<option value="${m.id}">${m.name} (รหัส: ${m.id})</option>`).join('');
+                       
+        // ดึงจำนวนขยะมาโชว์
+        fetchCleanupCount();
     } else {
         alert('รหัสผ่านไม่ถูกต้อง!');
+    }
+}
+
+async function fetchCleanupCount() {
+    try {
+        const res = await fetch('/api/cleanup-count');
+        const json = await res.json();
+        if (json.success) {
+            document.getElementById('cleanup-count-display').textContent = json.count;
+            if (json.count > 0) {
+                document.getElementById('btn-cleanup').classList.add('animate-pulse');
+            } else {
+                document.getElementById('btn-cleanup').classList.remove('animate-pulse');
+            }
+        }
+    } catch(e) {
+        console.error('Error fetching cleanup count', e);
     }
 }
 
@@ -110,6 +130,7 @@ async function manualCleanup() {
     const res = await fetch('/api/cleanup-manual', { method: 'POST' });
     const json = await res.json();
     alert(`ลบข้อมูลเรียบร้อยแล้ว: ${json.count} รายการ`);
+    fetchCleanupCount(); // ดึงจำนวนใหม่มาอัปเดตหน้าจอ
 }
 
 // QR Code Logic

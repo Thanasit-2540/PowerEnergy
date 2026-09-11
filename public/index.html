@@ -79,8 +79,11 @@
                 <!-- การตั้งค่าอื่นๆ (ขยะ) -->
                 <div class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow">
                     <h3 class="font-bold text-lg mb-4 text-red-500"><i class="fa-solid fa-trash mr-2"></i>ลบข้อมูลขยะ</h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">ลบข้อมูลและรูปภาพที่อายุเกิน 60 วันออกจากฐานข้อมูล</p>
-                    <button onclick="manualCleanup()" class="w-full bg-red-500 text-white py-2 rounded hover:bg-red-600"><i class="fa-solid fa-triangle-exclamation mr-2"></i>สั่งลบข้อมูลเก่าเดี๋ยวนี้</button>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                        ลบข้อมูลและรูปภาพที่อายุเกิน 60 วันออกจากฐานข้อมูล
+                        <br><span class="font-bold text-red-500">พบข้อมูลที่อายุเกิน 60 วันจำนวน: <span id="cleanup-count-display">0</span> รายการ</span>
+                    </p>
+                    <button id="btn-cleanup" onclick="manualCleanup()" class="w-full bg-red-500 text-white py-2 rounded hover:bg-red-600"><i class="fa-solid fa-triangle-exclamation mr-2"></i>สั่งลบข้อมูลเก่าเดี๋ยวนี้</button>
                     <p class="text-xs text-gray-400 mt-2">* ระบบอัตโนมัติจะลบข้อมูลที่เกิน 65 วันให้ทุกคืนอยู่แล้ว</p>
                 </div>
 

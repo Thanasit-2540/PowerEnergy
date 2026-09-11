@@ -271,6 +271,23 @@ async function cleanupOldData(days) {
     return totalDeleted;
 }
 
+app.get('/api/cleanup-count', async (req, res) => {
+    try {
+        if (!supabase) return res.json({ count: 0 });
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - 60);
+        const cutoffIso = cutoffDate.toISOString();
+
+        const { count: elecCount, error: err1 } = await supabase.from('electric_readings').select('*', { count: 'exact', head: true }).lt('created_at', cutoffIso);
+        const { count: waterCount, error: err2 } = await supabase.from('water_readings').select('*', { count: 'exact', head: true }).lt('created_at', cutoffIso);
+
+        const total = (elecCount || 0) + (waterCount || 0);
+        res.json({ success: true, count: total });
+    } catch(e) {
+        res.json({ success: false, error: e.message });
+    }
+});
+
 app.post('/api/cleanup-manual', async (req, res) => {
     try {
         const deletedCount = await cleanupOldData(60);
